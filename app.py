@@ -4,22 +4,35 @@ from flask import Flask, request, jsonify, render_template, send_file
 import pickle
 from augmentations import augmentations as augs
 from PIL import Image
+from werkzeug.utils import secure_filename
 import os , io , sys
 import base64
 from flask_cors import CORS
+import json
+
+
+# list to keep track of all the augmentations
+augs_list = []
 
 # Cors
 config = {
   'ORIGINS': [
     'http://localhost:8080',  # React
     'http://127.0.0.1:8080',  # React
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'http://127.0.0.1:5000'
   ],
 
   'SECRET_KEY': '...'
 }
 
+
 app = Flask(__name__)
+
+app.config.from_mapping(
+        BASE_URL="http://localhost:3000",
+)
+
 run_with_ngrok(app)
 
 @app.route('/')
@@ -31,14 +44,33 @@ def predict():
     '''
     For rendering results on HTML GUI
     '''
-    int_features = [int(x) for x in request.form.values()]
-    final_features = [np.array(int_features)]
-    prediction = model.predict(final_features)
+    return render_template('index.html', prediction_text='Employee Salary should be $ {}'.format("output"))
 
-    output = round(prediction[0], 2)
+##############
+############# Uploads #########################
+############
 
-    return render_template('index.html', prediction_text='Employee Salary should be $ {}'.format(output))
+UPLOAD_FOLDER = './Temp'
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+'''
+@app.route('/upload', methods=['POST'])
+def fileUpload():
+    target=os.path.join(UPLOAD_FOLDER,'test_docs')
+    if not os.path.isdir(target):
+        os.mkdir(target)
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    destination="/".join([target, filename])
+    file.save(destination)
+    session['uploadFilePath']=destination
+    response= file
+    return response
+'''
+##############
+############# Augment #########################
+############
 
 @app.route('/augment',methods=['POST'])
 def augment():
@@ -46,7 +78,16 @@ def augment():
     For Augmenting the image files
     '''
     print(request.form)
-    image = augs.applyAugmentation(request.form)
+
+    if request.form['aug_mode'] == 'undo' :
+        augs_list.pop()
+    elif request.form['aug_mode'] == 'reset':
+        augs_list = []
+    else:
+        augs_list.append(request.form)
+
+    print(augs_list)
+    image = augs.applyAugmentation(augs_list)
     img = Image.fromarray(image.astype('uint8'))
     # create file-object in memory
     file_object = io.BytesIO()
