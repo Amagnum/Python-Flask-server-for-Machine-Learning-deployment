@@ -1,3 +1,8 @@
+#!pip install flask-ngrok
+#!pip install flask_cors
+
+#from flask_cors import CORS
+from baselineModel import baselinePredict
 from flask_ngrok import run_with_ngrok
 import numpy as np
 from flask import Flask, request, jsonify, render_template, send_file
@@ -7,12 +12,11 @@ from PIL import Image
 from werkzeug.utils import secure_filename
 import os , io , sys
 import base64
-from flask_cors import CORS
 import json
 
 
 # list to keep track of all the augmentations
-augs_list = []
+global augs_list
 
 # Cors
 config = {
@@ -44,7 +48,13 @@ def predict():
     '''
     For rendering results on HTML GUI
     '''
-    return render_template('index.html', prediction_text='Employee Salary should be $ {}'.format("output"))
+    global augs_list
+    prediction_list, class_id = baselinePredict.predict(request.form, augs_list)
+    data = {
+        "prediction_list" : prediction_list,
+        "class_id": class_id
+    }
+    return data
 
 ##############
 ############# Uploads #########################
@@ -78,7 +88,8 @@ def augment():
     For Augmenting the image files
     '''
     print(request.form)
-
+    global augs_list
+    print(augs_list)
     if request.form['aug_mode'] == 'undo' :
         augs_list.pop()
     elif request.form['aug_mode'] == 'reset':
@@ -101,7 +112,7 @@ def augment():
     return send_file(file_object, mimetype='image/PNG')
     #return render_template('index.html', prediction_text='Employee Salary should be  ${}'.format(request.form))
 
-CORS(app, resources={ r'/*': {'origins': config['ORIGINS']}}, supports_credentials=True)
+#CORS(app, resources={ r'/*': {'origins': config['ORIGINS']}}, supports_credentials=True)
 
 if __name__ == "__main__":
     app.run()
