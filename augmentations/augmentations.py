@@ -2,8 +2,8 @@
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from augmentations.Automold import Automold as am
-from augmentations.Automold import Helpers as hp
+import augmentations.Automold as am
+import augmentations.Helpers as hp
 import matplotlib.image as mpimg
 import albumentations as A
 
