@@ -19,8 +19,8 @@ plt.savefig("foo.jpg")
 def visualize(image):
     plt.figure(figsize=(4, 4))
     plt.axis('off')
-    plt.imshow(image)
-    plt.savefig("./temp/augmented.jpg")
+    #plt.imshow(image)
+    #plt.savefig("./temp/augmented.jpg")
     #plt.show()
     plt.close()
 
@@ -32,13 +32,11 @@ all_aug = ['CLAHE', 'Blur', 'Cutout', 'GaussNoise', 'HueSaturationValue', 'Chann
 def applyAugmentation(parameters):
     path = './temp/images/img2.jpg'
     image = cv2.cvtColor(cv2.imread(path),cv2.COLOR_BGR2RGB)
-    #images = hp.load_images(path)
-    #image = images[0]
-    #image *= 255
     image = image.astype(np.uint8)
     transforms = []
     input_aug = parameters["aug_name"]
     i = input_aug
+    print("applying: $i")
 
     if i == 'CLAHE':
         clip_limit = int(parameters['clip_limit'])
@@ -49,12 +47,12 @@ def applyAugmentation(parameters):
         transforms.append(A.CLAHE(clip_limit=clip_limit, tile_grid_size=tile_grid_size, always_apply=False, p=prob))
     elif i == 'Cutout':
         num_holes = int(parameters['num_holes'])
-        max_h_size, max_w_size = int(parameters['max_h_size']), int(parameters[max_w_size])
+        max_h_size, max_w_size = int(parameters['max_h_size']), int(parameters["max_w_size"])
         prob = float(parameters['prob'])
         transforms.append(A.Cutout(num_holes=num_holes, max_h_size=max_h_size,
                                    max_w_size=max_w_size, always_apply=False, p=prob))
     elif i == 'GaussNoise':
-        var_limit_x, var_limit_y = int(parameters[var_limit_x]), int(parameters[var_limit_y])
+        var_limit_x, var_limit_y = int(parameters["var_limit_x"]), int(parameters["var_limit_y"])
         var_limit = (var_limit_x, var_limit_y)
         prob = float(parameters['prob'])
         transforms.append(A.GaussNoise(var_limit=var_limit,  always_apply=False, p=prob))
@@ -73,8 +71,8 @@ def applyAugmentation(parameters):
         prob = float(parameters['prob'])
         transforms.append(A.ChannelShuffle(p=prob))
     elif i == 'GridDistortion':
-        num_steps = int(parameters[num_steps])
-        distort_limit = float(parameters[distort_limit])
+        num_steps = int(parameters["num_steps"])
+        distort_limit = float(parameters["distort_limit"])
         prob = float(parameters['prob'])
         transforms.append(A.GridDistortion(num_steps=num_steps, distort_limit=distort_limit,
                                            interpolation=1, border_mode=4, always_apply=False, p=prob))
@@ -114,7 +112,7 @@ def applyAugmentation(parameters):
         transforms.append(A.ShiftScaleRotate(shift_limit=shift_limit, scale_limit=0.1,
                                              rotate_limit=rotate_limit, interpolation=1, border_mode=4, always_apply=False, p=prob))
     elif i == 'add_rain':
-        rain_type = input(parameters['rain_type'])
+        rain_type = parameters['rain_type']
         image = am.add_rain(image, rain_type=rain_type, slant=-1, drop_length=1, drop_width=1)
     elif i == 'add_snow':
         snow_coeff = float(parameters['snow_coeff'])
@@ -126,10 +124,11 @@ def applyAugmentation(parameters):
     elif i == 'darken':
         darkness_coeff = float(parameters['darkness_coeff'])
         image = am.darken(image, darkness_coeff=darkness_coeff)
+
     transform = A.Compose(transforms)
     transformed = transform(image=image)
     transformed_image = transformed["image"]
-    visualize(transformed_image)
+    #visualize(transformed_image)
     return transformed_image
 
 # visualize(augmentation(image))

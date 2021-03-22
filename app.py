@@ -1,3 +1,4 @@
+from flask_ngrok import run_with_ngrok
 import numpy as np
 from flask import Flask, request, jsonify, render_template, send_file
 import pickle
@@ -5,9 +6,21 @@ from augmentations import augmentations as augs
 from PIL import Image
 import os , io , sys
 import base64
+from flask_cors import CORS
+
+# Cors
+config = {
+  'ORIGINS': [
+    'http://localhost:8080',  # React
+    'http://127.0.0.1:8080',  # React
+    'http://localhost:3000'
+  ],
+
+  'SECRET_KEY': '...'
+}
 
 app = Flask(__name__)
-model = pickle.load(open('model.pkl', 'rb'))
+run_with_ngrok(app)
 
 @app.route('/')
 def home():
@@ -33,9 +46,6 @@ def augment():
     For Augmenting the image files
     '''
     print(request.form)
-    print(request.form['aug_name'])
-    print(request.form['blur_limit'])
-    print(request.form['prob'])
     image = augs.applyAugmentation(request.form)
     img = Image.fromarray(image.astype('uint8'))
     # create file-object in memory
@@ -44,11 +54,13 @@ def augment():
     # write PNG in file-object
     img.save(file_object, 'PNG')
 
-    # move to beginning of file so `send_file()` it will read from start    
+    # move to beginning of file so `send_file()` it will read from start
     file_object.seek(0)
 
     return send_file(file_object, mimetype='image/PNG')
     #return render_template('index.html', prediction_text='Employee Salary should be  ${}'.format(request.form))
 
+CORS(app, resources={ r'/*': {'origins': config['ORIGINS']}}, supports_credentials=True)
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
