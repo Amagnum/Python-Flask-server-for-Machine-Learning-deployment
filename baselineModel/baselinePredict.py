@@ -18,7 +18,7 @@ def load_image(path):
     image = cv.resize(image, (size, size))
     return image
 
-def load_model(path):
+def load_my_model(path):
     """
     function: loads pre-trained neural network
     :param params: params['path'] = 'C:/users/desktop/uploads/model_v1.h5'
@@ -37,7 +37,7 @@ def predict(params, aug_list):
     image = load_image(params['path_image'])
     image = augs.applyAugmentation(image, aug_list)  # augmentation function
     # image = preprocess(image)  # preprocess function
-    model = load_model(params['path_model'])
+    model = load_my_model(params['path_model'])
     image = numpy.array(image)
     image = numpy.expand_dims(image, axis=0)
     prediction = model.evaluate(image)
