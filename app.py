@@ -43,7 +43,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config.from_mapping(
         BASE_URL="http://localhost:3000",
 )
-
 run_with_ngrok(app)
 
 
@@ -65,6 +64,7 @@ def fileUpload():
     target=os.path.join(UPLOAD_FOLDER,'test_docs')
     if not os.path.isdir(target):
         os.mkdir(target)
+    logger.info("welcome to upload`")
     file = request.files['file']
     filename = secure_filename(file.filename)
     destination="/".join([target, filename])
@@ -99,7 +99,7 @@ def displayImage():
     http://my_URL.com/displayImages?id=image_name.png
     '''
     if 'id' in request.args:
-        id = int(request.args['id'])
+        id = request.args['id']
     else:
         return "Error: No id field provided. Please specify an id."
 
@@ -169,8 +169,8 @@ def predict():
 ############# Re-Train #########################
 ############
 
-@app.route('/predict',methods=['POST'])
-def predict():
+@app.route('/retrain',methods=['POST'])
+def retrain():
     '''
     For rendering results on HTML GUI
     '''
