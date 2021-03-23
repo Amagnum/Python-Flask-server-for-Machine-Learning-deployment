@@ -1,19 +1,22 @@
-#!pip install flask-ngrok
-#!pip install flask_cors
+# MAIN SERVER
 
-from flask_cors import CORS
-from baselineModel import baselinePredict
+from flask_cors import CORS, cross_origin
 from flask_ngrok import run_with_ngrok
 import numpy as np
 from flask import Flask, request, jsonify, render_template, send_file
 import pickle
 from augmentations import augmentations as augs
+from baselineModel import baselinePredict
 from PIL import Image
 from werkzeug.utils import secure_filename
 import os , io , sys
 import base64
+import cv2
 import json
 
+##############
+############# Variables #########################
+############
 
 # list to keep track of all the augmentations
 augs_list = []
@@ -31,39 +34,45 @@ config = {
 }
 
 
+UPLOAD_FOLDER = './Temp'
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+
 app = Flask(__name__)
 
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config.from_mapping(
         BASE_URL="http://localhost:3000",
 )
 
 run_with_ngrok(app)
 
+
+############################################
+############# APIs #########################
+############################################
+
 @app.route('/')
 def home():
     return render_template('index.html')
 
-@app.route('/predict',methods=['POST'])
-def predict():
-    '''
-    For rendering results on HTML GUI
-    '''
-    global augs_list
-    prediction_list, class_id = baselinePredict.predict(request.form, augs_list)
-    data = {
-        "prediction_list" : prediction_list,
-        "class_id": class_id
-    }
-    return data
 
 ##############
 ############# Uploads #########################
 ############
 
-UPLOAD_FOLDER = './Temp'
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+@app.route('/uploadimages', methods=['GET','POST'])
+def fileUpload():
+    target=os.path.join(UPLOAD_FOLDER,'test_docs')
+    if not os.path.isdir(target):
+        os.mkdir(target)
+    file = request.files['file']
+    filename = secure_filename(file.filename)
+    destination="/".join([target, filename])
+    file.save(destination)
+    session['uploadFilePath']=destination
+    response= "this is a string"
+    return response
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 '''
 @app.route('/upload', methods=['POST'])
 def fileUpload():
@@ -80,35 +89,26 @@ def fileUpload():
 '''
 
 ##############
-############# Augment #########################
+############# Display Images #########################
 ############
 
-@app.route('/augment',methods=['POST'])
-def augment():
+@app.route('/displayImages')
+def displayImage():
     '''
-    For Augmenting the image files
-    Input: Map -> { "aug_name": "Blur", <its parameters>}
-    Output: PNG Img (fianl augmented image)
+    For serving the display images (used in display, outputs, augmentations, etc)
+    http://my_URL.com/displayImages?id=image_name.png
     '''
-    print(request.form)
-    global augs_list
-    print(augs_list)
-    if request.form['aug_mode'] == 'undo' :
-        augs_list.pop()
-    elif request.form['aug_mode'] == 'reset':
-        augs_list = []
+    if 'id' in request.args:
+        id = int(request.args['id'])
     else:
-        augs_list.append(request.form)
+        return "Error: No id field provided. Please specify an id."
 
-    print(augs_list)
-    image = augs.applyAugmentation(augs_list)
+    image = cv2.imread('./display_images/'+str(id), cv2.IMREAD_COLOR)
     img = Image.fromarray(image.astype('uint8'))
     # create file-object in memory
     file_object = io.BytesIO()
-
     # write PNG in file-object
     img.save(file_object, 'PNG')
-
     # move to beginning of file so `send_file()` it will read from start
     file_object.seek(0)
 
@@ -116,19 +116,17 @@ def augment():
 
 
 ##############
-############# DisplayImages #########################
+############# Augment #########################
 ############
 
-@app.route('/displayImages',methods=['POST'])
+@app.route('/augment',methods=['POST'])
 def augment():
     '''
     For Augmenting the image files
-    Input: Map -> { "aug_name": "Blur", <its parameters>}
-    Output: PNG Img (final augmented image)
     '''
     print(request.form)
     global augs_list
-    print(augs_list)
+    #print(augs_list)
     if request.form['aug_mode'] == 'undo' :
         augs_list.pop()
     elif request.form['aug_mode'] == 'reset':
@@ -137,9 +135,8 @@ def augment():
         augs_list.append(request.form)
 
     print(augs_list)
-    image = augs.applyAugmentation(augs_list)
+    image = augs.applyLoadedImage(augs_list)
     img = Image.fromarray(image.astype('uint8'))
-
     # create file-object in memory
     file_object = io.BytesIO()
 
@@ -150,11 +147,44 @@ def augment():
     file_object.seek(0)
 
     return send_file(file_object, mimetype='image/PNG')
+    
+##############
+############# Predict #########################
+############
 
+@app.route('/predict',methods=['POST'])
+def predict():
+    '''
+    For rendering results on HTML GUI
+    '''
+    global augs_list
+    prediction_list, class_id = baselinePredict.predict(request.form, augs_list)
+    data = {
+        "prediction_list" : prediction_list,
+        "class_id": class_id
+    }
+    return data
 
-#######
-######### END APIS #########
-#######
+##############
+############# Re-Train #########################
+############
+
+@app.route('/predict',methods=['POST'])
+def predict():
+    '''
+    For rendering results on HTML GUI
+    '''
+    global augs_list
+    prediction_list, class_id = baselinePredict.predict(request.form, augs_list)
+    data = {
+        "prediction_list" : prediction_list,
+        "class_id": class_id
+    }
+    return data
+
+################################################
+############# END APIS #########################
+################################################
 
 CORS(app, resources={ r'/*': {'origins': config['ORIGINS']}}, supports_credentials=True)
 
