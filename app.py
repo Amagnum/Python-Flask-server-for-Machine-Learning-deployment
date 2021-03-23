@@ -16,7 +16,7 @@ import json
 
 
 # list to keep track of all the augmentations
-global augs_list
+augs_list = []
 
 # Cors
 config = {
