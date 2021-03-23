@@ -1,7 +1,7 @@
 #!pip install flask-ngrok
 #!pip install flask_cors
 
-#from flask_cors import CORS
+from flask_cors import CORS
 from baselineModel import baselinePredict
 from flask_ngrok import run_with_ngrok
 import numpy as np
@@ -78,6 +78,7 @@ def fileUpload():
     response= file
     return response
 '''
+
 ##############
 ############# Augment #########################
 ############
@@ -86,6 +87,8 @@ def fileUpload():
 def augment():
     '''
     For Augmenting the image files
+    Input: Map -> { "aug_name": "Blur", <its parameters>}
+    Output: PNG Img (fianl augmented image)
     '''
     print(request.form)
     global augs_list
@@ -110,9 +113,50 @@ def augment():
     file_object.seek(0)
 
     return send_file(file_object, mimetype='image/PNG')
-    #return render_template('index.html', prediction_text='Employee Salary should be  ${}'.format(request.form))
 
-#CORS(app, resources={ r'/*': {'origins': config['ORIGINS']}}, supports_credentials=True)
+
+##############
+############# DisplayImages #########################
+############
+
+@app.route('/displayImages',methods=['POST'])
+def augment():
+    '''
+    For Augmenting the image files
+    Input: Map -> { "aug_name": "Blur", <its parameters>}
+    Output: PNG Img (final augmented image)
+    '''
+    print(request.form)
+    global augs_list
+    print(augs_list)
+    if request.form['aug_mode'] == 'undo' :
+        augs_list.pop()
+    elif request.form['aug_mode'] == 'reset':
+        augs_list = []
+    else:
+        augs_list.append(request.form)
+
+    print(augs_list)
+    image = augs.applyAugmentation(augs_list)
+    img = Image.fromarray(image.astype('uint8'))
+
+    # create file-object in memory
+    file_object = io.BytesIO()
+
+    # write PNG in file-object
+    img.save(file_object, 'PNG')
+
+    # move to beginning of file so `send_file()` it will read from start
+    file_object.seek(0)
+
+    return send_file(file_object, mimetype='image/PNG')
+
+
+#######
+######### END APIS #########
+#######
+
+CORS(app, resources={ r'/*': {'origins': config['ORIGINS']}}, supports_credentials=True)
 
 if __name__ == "__main__":
     app.run()

@@ -2,6 +2,7 @@ import cv2 as cv
 import numpy
 from keras.models import load_model
 from augmentations import augmentations as augs
+import matplotlib.pyplot as plt
 
 def load_image(path):
     '''
@@ -36,11 +37,13 @@ def predict(params, aug_list):
     '''
     image = load_image(params['path_image'])
     image = augs.applyAugmentation(image, aug_list)  # augmentation function
+    plt.imshow(image)
     # image = preprocess(image)  # preprocess function
     model = load_my_model(params['path_model'])
     image = numpy.array(image)
     image = numpy.expand_dims(image, axis=0)
-    prediction = model.evaluate(image)
+    prediction = model.predict(image)
+    print(prediction)
     prediction = prediction.tolist()
     m = max(prediction[0])
     class_id = prediction[0].index(m)
