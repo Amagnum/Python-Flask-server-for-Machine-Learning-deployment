@@ -15,7 +15,7 @@ def load_image(path):
     #Yuvnish's model-> params['size']=64
     #Sakshee's model-> params['size']=32
     size = 32
-    image = cv.resize(image, size, size)
+    image = cv.resize(image, (size, size))
     return image
 
 def load_model(path):
