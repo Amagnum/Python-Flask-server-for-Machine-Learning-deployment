@@ -323,7 +323,7 @@ def create_data_over(d):
     i = d['i']
     diff = d['diff']
     input_aug = d['input_aug']
-    mask = [int(x) == i for x in label_data.tolist()]
+    mask = [int(x) == i for x in label_data]
     images1 = img_data[mask]
     del img_data
     label1 = label_data[mask]
@@ -371,7 +371,7 @@ def create_data_under(d):
     label_data = d['label_data']
     i = d['i']
     diff = d['diff']
-    mask = [int(x) == i for x in label_data.tolist()]
+    mask = [int(x) == i for x in label_data]
     images = img_data[mask]
     del img_data
     labels = label_data[mask]
