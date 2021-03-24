@@ -27,14 +27,15 @@ config = {
     'http://localhost:8080',  # React
     'http://127.0.0.1:8080',  # React
     'http://localhost:3000',
-    'http://127.0.0.1:5000'
+    'http://127.0.0.1:5000',
+    'https://xenodochial-poincare-85c4e7.netlify.app'
   ],
 
   'SECRET_KEY': '...'
 }
 
 
-UPLOAD_FOLDER = './Temp'
+UPLOAD_FOLDER = './temp'
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
 app = Flask(__name__)
@@ -59,7 +60,7 @@ def home():
 ############# Uploads #########################
 ############
 
-@app.route('/uploadimages', methods=['GET','POST'])
+@app.route('/uploadimages2', methods=['GET','POST'])
 def fileUpload():
     target=os.path.join(UPLOAD_FOLDER,'test_docs')
     if not os.path.isdir(target):
@@ -73,6 +74,33 @@ def fileUpload():
     response= "this is a string"
     return response
 
+@app.route('/uploadimages',methods=["POST"])
+def uploadimages():
+    files = request.form['file']
+
+    if request.form['input_type'] == 'predict':
+      i=1;
+      for image in files:
+        print(image)
+        filename = secure_filename(file.filename)
+        file.save(os.path.join('./temp/predict/predict_'+str(i),'jpg'))
+        i=i+1
+    elif request.form['input_type'] == 'retrain':
+      i=1;
+      className = request.form['class_name']
+      for image in files:
+        print(image)
+        file.save(os.path.join('./temp/retrain/retrain_'+str(className)+'_'+str(i),'jpg'))
+        i=i+1
+      #Add data to CSV
+
+    print(files)
+    print(request.form)
+    print(files)
+    # print(jsonData)
+
+    return jsonify(jsonData)
+    
 '''
 @app.route('/upload', methods=['POST'])
 def fileUpload():
@@ -103,7 +131,11 @@ def displayImage():
     else:
         return "Error: No id field provided. Please specify an id."
 
-    image = cv2.imread('./display_images/'+str(id), cv2.IMREAD_COLOR)
+    image_path = './display_images/'+str(id)
+    if os.path.isfile(image_path):
+      image = cv2.imread(image_path, cv2.IMREAD_COLOR)
+    else :
+      image = cv2.imread('./display_images/not_found.png', cv2.IMREAD_COLOR)
     img = Image.fromarray(image.astype('uint8'))
     # create file-object in memory
     file_object = io.BytesIO()
@@ -127,7 +159,7 @@ def augment():
     print(request.form)
     global augs_list
     #print(augs_list)
-    if request.form['aug_mode'] == 'undo' :
+    if request.form['aug_mode'] == 'undo':
         augs_list.pop()
     elif request.form['aug_mode'] == 'reset':
         augs_list = []
@@ -145,7 +177,6 @@ def augment():
 
     # move to beginning of file so `send_file()` it will read from start
     file_object.seek(0)
-
     return send_file(file_object, mimetype='image/PNG')
     
 ##############
@@ -163,6 +194,7 @@ def predict():
         "prediction_list" : prediction_list,
         "class_id": class_id
     }
+
     return data
 
 ##############
@@ -180,6 +212,7 @@ def retrain():
         "prediction_list" : prediction_list,
         "class_id": class_id
     }
+
     return data
 
 ################################################
