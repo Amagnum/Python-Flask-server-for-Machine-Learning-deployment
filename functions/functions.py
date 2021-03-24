@@ -247,6 +247,7 @@ def augment_batch(d):
         images[i] = augs.applyAugmentation(images[i], input_aug)  # Adarsh's augmentation function
     return images
 
+
 """Functions for Step 3
 
 Loading Saved Model
@@ -268,6 +269,7 @@ def load_model(dict):
 """Loading the Dataset"""
 
 #yuvnish, vartika
+
 
 def load_dataset(csv_file_path, size_of_image=32):
     """
@@ -406,10 +408,10 @@ def balanced_dataset(d):
     d['img_data'] = img_data
     d['label_data'] = label_data
 
-    for i in range(len(unique)):
+    for i in d['class_ids']:
         diff = var_num[i] - num_per_class[i]
         if diff == 0:
-            mask = [int(x) == i for x in label_data.tolist()]
+            mask = [int(x) == i for x in label_data]
             images = img_data[mask]
             labels = label_data[mask]
             images_lst.append(images)
