@@ -811,7 +811,7 @@ def preprocessing(X_data, preprocess_list, preprocess_parameters):
             parameters = preprocess_parameters[i]
 
             if preprocess == 'adjust_gamma':
-                gamma = parameters['gamma']
+                gamma = int(parameters['gamma'])
                 image = adjust_gamma(image, gamma)
 
             elif preprocess == 'CLAHE':
@@ -825,10 +825,10 @@ def preprocessing(X_data, preprocess_list, preprocess_parameters):
                     image = clahe.apply(image)                                       # appling CLAHE
 
             elif preprocess == 'denoise':
-                h = parameters['h']  # default= 10
-                hcolor = parameters['hcolor']  # default= 10
-                templateWindowSize = parameters['templateWindowSize']  # default= 7
-                searchWindowSize = parameters['searchWindowSize']  # default= 21
+                h = int(parameters['h'])  # default= 10
+                hcolor = int(parameters['hcolor'])  # default= 10
+                templateWindowSize = int(parameters['templateWindowSize'])  # default= 7
+                searchWindowSize = int(parameters['searchWindowSize'])  # default= 21
                 image = cv2.fastNlMeansDenoisingColored(
                     image, None, h, hcolor, templateWindowSize, searchWindowSize)   # remove noise + smoothing(colored)
 
