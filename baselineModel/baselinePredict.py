@@ -43,9 +43,9 @@ def predict(params, aug_list):
 
     image = load_image(params['path_image'],params['path_model'])
     image = augs.applyAugmentation(image, aug_list)  # augmentation function
-    cv.imwrite('./display_images/predict_aug_image.jpg', image)
+    cv.imwrite('./display_images/predict_aug_image.png', image)
     # image = preprocess(image)  # preprocess function
-    cv.imwrite('./display_images/predict_prep_image.jpg', image)
+    cv.imwrite('./display_images/predict_prep_image.png', image)
     model = load_my_model(params['path_model'])
     image = numpy.array(image)
     image = numpy.expand_dims(image, axis=0)
