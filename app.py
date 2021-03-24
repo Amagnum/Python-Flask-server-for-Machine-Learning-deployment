@@ -189,7 +189,13 @@ def predict():
     For rendering results on HTML GUI
     '''
     global augs_list
-    prediction_list, class_id = baselinePredict.predict(request.form, augs_list)
+    #Sakshee_GTSRB_classification.h5
+    #yuvnish_tsr_model_v5.h5
+    param = {
+    "path_model" : "/content/drive/MyDrive/Inter_IIT_German_Traffic_Sign/German_Traffic_Sign_Recognition_Dataset/"+request.form['path_model'],
+    "path_image" : "./temp/predict/predict_1.jpg"
+    }
+    prediction_list, class_id = baselinePredict.predict(param, augs_list)
     data = {
         "prediction_list" : prediction_list,
         "class_id": class_id
