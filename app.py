@@ -7,6 +7,7 @@ from flask import Flask, request, jsonify, render_template, send_file
 import pickle
 from augmentations import augmentations as augs
 from baselineModel import baselinePredict
+from functions import functions as fnc
 from PIL import Image
 from werkzeug.utils import secure_filename
 import os , io , sys
@@ -20,6 +21,7 @@ import json
 
 # list to keep track of all the augmentations
 augs_list = []
+pre_processing = {}
 
 # Cors
 config = {
@@ -28,7 +30,9 @@ config = {
     'http://127.0.0.1:8080',  # React
     'http://localhost:3000',
     'http://127.0.0.1:5000',
-    'https://xenodochial-poincare-85c4e7.netlify.app'
+    'https://xenodochial-poincare-85c4e7.netlify.app',
+    'https://quirky-snyder-121fad.netlify.app/',
+    "*"
   ],
 
   'SECRET_KEY': '...'
@@ -60,61 +64,47 @@ def home():
 ############# Uploads #########################
 ############
 
-@app.route('/uploadimages2', methods=['GET','POST'])
-def fileUpload():
-    target=os.path.join(UPLOAD_FOLDER,'test_docs')
-    if not os.path.isdir(target):
-        os.mkdir(target)
-    logger.info("welcome to upload`")
-    file = request.files['file']
-    filename = secure_filename(file.filename)
-    destination="/".join([target, filename])
-    file.save(destination)
-    session['uploadFilePath']=destination
-    response= "this is a string"
-    return response
-
 @app.route('/uploadimages',methods=["POST"])
 def uploadimages():
-    files = request.form['file']
-
-    if request.form['input_type'] == 'predict':
-      i=1;
-      for image in files:
-        print(image)
-        filename = secure_filename(file.filename)
-        file.save(os.path.join('./temp/predict/predict_'+str(i),'jpg'))
-        i=i+1
-    elif request.form['input_type'] == 'retrain':
-      i=1;
-      className = request.form['class_name']
-      for image in files:
-        print(image)
-        file.save(os.path.join('./temp/retrain/retrain_'+str(className)+'_'+str(i),'jpg'))
-        i=i+1
-      #Add data to CSV
-
-    print(files)
+    files = request.files
+    print(request.files)
+    #print(files)
     print(request.form)
-    print(files)
-    # print(jsonData)
-
-    return jsonify({"status": "success"})
+    #print(files)
+    status = 'false'
+    if request.form['input_type'] == 'predict':
+      for key in files:
+        print(key)
+        print(files[key])
+        files[key].save(os.path.join('./temp/predict/predict_'+key,'jpg'))
+      status = 'success'
+    elif request.form['input_type'] == 'retrain':
+      className = request.form['class_name']
+      image_names= []
+      for key in files:
+        print(key)
+        print(files[key])
+        image_name = 'retrain_'+key+'.jpg'
+        image_names.append(image_name)
+        files[key].save(os.path.join('./temp/retrain/', image_name))
+      #Add data to CSV
+      param = {
+        'existing_class' : 'Y',
+        'path' : image_names,
+        'class_id': className,
+        'csv_file_path': '',  #TODO add CSV PATH
+        'saved_images_directory': './temp/retrain/'
+      }
+      #status = fnc.upload_class(param)
     
-'''
-@app.route('/upload', methods=['POST'])
-def fileUpload():
-    target=os.path.join(UPLOAD_FOLDER,'test_docs')
-    if not os.path.isdir(target):
-        os.mkdir(target)
-    file = request.files['file']
-    filename = secure_filename(file.filename)
-    destination="/".join([target, filename])
-    file.save(destination)
-    session['uploadFilePath']=destination
-    response= file
-    return response
-'''
+    
+    #print(files)
+    print(request.form)
+    #print(files)
+    #print(jsonData)
+
+    return jsonify({"status": status})
+  
 
 ##############
 ############# Display Images #########################
@@ -167,7 +157,16 @@ def augment():
         augs_list.append(request.form)
 
     print(augs_list)
-    image = augs.applyLoadedImage(augs_list)
+    augs_list['prob'] = 1.0
+
+    path = ''
+    if request.form['input_type']=='predict':
+      path = './temp/predict/predict_0.jpg'
+    else request.form['input_type']=='retrain'
+      path = './temp/retrain/retrain_0.jpg'
+    
+    image = augs.applyLoadedImage(augs_list,path)
+
     img = Image.fromarray(image.astype('uint8'))
     # create file-object in memory
     file_object = io.BytesIO()
@@ -193,15 +192,46 @@ def predict():
     #yuvnish_tsr_model_v5.h5
     param = {
     "path_model" : "/content/drive/MyDrive/Inter_IIT_German_Traffic_Sign/German_Traffic_Sign_Recognition_Dataset/"+request.form['path_model'],
-    "path_image" : "./temp/predict/predict_1.jpg"
+    "path_image" : './display_images/predict_prep_image.png'
     }
-    prediction_list, class_id = baselinePredict.predict(param, augs_list)
+    prediction_list, class_id = baselinePredict.predict(param, [])
     data = {
         "prediction_list" : prediction_list,
         "class_id": class_id
     }
 
     return data
+
+@app.route('/predict_preprocess',methods=['POST'])
+def predict_preprocess():
+    '''
+    For rendering results on HTML GUI
+    '''
+    global augs_list
+
+    param = {}
+    param['path'] = './display_images/predict_aug_image.png'
+    img = fnc.load_image(param)
+    prepPara = request.form
+
+    print(list(prepPara.keys()))
+    print(list(prepPara.values()))
+    images = fnc.preprocessing([img], list(prepPara.keys()), list(prepPara.values()))
+    image = images[0]
+
+    cv.imwrite('./display_images/predict_prep_image.png', image)
+    #plt.imshow(images[0])
+
+    img = Image.fromarray(image.astype('uint8'))
+    # create file-object in memory
+    file_object = io.BytesIO()
+
+    # write PNG in file-object
+    img.save(file_object, 'PNG')
+
+    # move to beginning of file so `send_file()` it will read from start
+    file_object.seek(0)
+    return send_file(file_object, mimetype='image/PNG')
 
 ##############
 ############# Re-Train #########################
