@@ -28,8 +28,8 @@ def visualize(image):
 all_aug = ['CLAHE', 'Blur', 'Cutout', 'GaussNoise', 'HueSaturationValue', 'ChannelShuffle', 'GridDistortion', 'MedianBlur', 'Normalize', 'PadIfNeeded',
            'RandomBrightness', 'RandomBrightnessContrast', 'RandomContrast', 'ToGray', 'ShiftScaleRotate', 'add_rain', 'add_snow', 'add_shadow', 'darken', 'random_brightness']
 
-def applyLoadedImage(aug_list):
-    path = './temp/images/img2.jpg'
+def applyLoadedImage(aug_list,path):
+    #path = './temp/images/img2.jpg'
     image = cv2.cvtColor(cv2.imread(path),cv2.COLOR_BGR2RGB)
     image = image.astype(np.uint8)
     return applyAugmentation(image,aug_list)

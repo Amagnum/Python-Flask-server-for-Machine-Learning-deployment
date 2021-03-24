@@ -99,7 +99,7 @@ def uploadimages():
     print(files)
     # print(jsonData)
 
-    return jsonify(jsonData)
+    return jsonify({"status": "success"})
     
 '''
 @app.route('/upload', methods=['POST'])
