@@ -4,7 +4,7 @@ from keras.models import load_model
 from augmentations import augmentations as augs
 import matplotlib.pyplot as plt
 
-def load_image(path):
+def load_image(path, model):
     '''
     function: loads image uploaded by user
     :param params: params['path'] = C:/users/desktop/uploads/image.jpg
@@ -13,9 +13,14 @@ def load_image(path):
     '''
     image = cv.imread(path)
     image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+  
+    if 'yuvnish' in model:
+      size = 64
+    else:
+      size = 32
     #Yuvnish's model-> params['size']=64
     #Sakshee's model-> params['size']=32
-    size = 32
+    #size = 32
     image = cv.resize(image, (size, size))
     return image
 
@@ -35,7 +40,8 @@ def predict(params, aug_list):
                  params['path_model'] = 'C:/users/desktop/uploads/model_v1.h5'
     :return: prediction_list (a list), class_id (an integer)
     '''
-    image = load_image(params['path_image'])
+
+    image = load_image(params['path_image'],params['path_model'])
     image = augs.applyAugmentation(image, aug_list)  # augmentation function
     cv.imwrite('./display_images/predict_aug_image.jpg', image)
     # image = preprocess(image)  # preprocess function
