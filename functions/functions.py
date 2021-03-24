@@ -421,7 +421,6 @@ def predict(dict):
 
 #yuvnish, vartika
 
-
 def load_dataset(csv_file_path, size_of_image=32):
     """
     function: loads images and labels from csv file (combined data set)
@@ -434,8 +433,9 @@ def load_dataset(csv_file_path, size_of_image=32):
 
     with open(csv_file_path, 'r') as f:
         reader = csv.reader(f)
+        header = next(reader)
         for row in reader:
-            if row[0] != '':
+            if row[0] != '' and len(row[0]) != 0:
                 label = int(row[0])
                 image = np.array([int(a) for a in row[1:]], dtype='uint8')
 
@@ -537,26 +537,26 @@ def create_data_under(d):
 # bharat
 
 
-def final_data(d):
+def balanced_dataset(d):
     """
     function: returns balanced dataset
     :param d: d['class_ids'] = list of class ids specified by user
               d['number_of_images'] = list of number of images users wants in a class
-              d['img_data'] = list of all images
-              d['label_data'] = list of all labels
               d['input_aug'] = list of all augmentations specified by user
+              d['csv_path'] = path of csv file 
     :return: final list of augmented images and labels
     """
+    img_data, label_data = load_dataset(d['csv_path'], size_of_image=32)
     d_list_to_dict = {'list1': d['class_ids'], 'list2': d['number_of_images']}
     var_num = list_to_dictionary(d_list_to_dict)
-    img_data = d['img_data']
-    label_data = d['label_data']
 
     unique, counts = np.unique(label_data, return_counts=True)
     num_per_class = dict(zip(unique, counts))
 
     images_lst = []
     labels_lst = []
+    d['img_data'] = img_data
+    d['label_data'] = label_data
 
     for i in range(len(unique)):
         diff = var_num[i] - num_per_class[i]
