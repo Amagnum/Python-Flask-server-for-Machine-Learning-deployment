@@ -60,7 +60,7 @@ def visualize_classes(dict):
         for row in reader:
             label = int(row[0])
             image = np.array([int(a) for a in row[1:]], dtype='uint8')
-            image = image.reshape((dict['size'], dict['size']))
+            image = image.reshape((dict['size'], dict['size'],3))
             x.append(image)
             y.append(label)
 
