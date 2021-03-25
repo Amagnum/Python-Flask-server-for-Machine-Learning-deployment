@@ -2,17 +2,17 @@
 
 from flask_cors import CORS, cross_origin
 from flask_ngrok import run_with_ngrok
-import numpy as np
 from flask import Flask, request, jsonify, render_template, send_file
-import pickle
 from augmentations import augmentations as augs
 from baselineModel import baselinePredict
 from functions import functions as fnc
-from PIL import Image
+from keras.models import load_model, Model
 from werkzeug.utils import secure_filename
+from PIL import Image
 import os
 import io
 import sys
+import numpy as np
 import base64
 import cv2
 import json
@@ -25,6 +25,7 @@ import json
 augs_list = []
 pre_processing = {}
 
+
 # Cors
 config = {
     'ORIGINS': [
@@ -32,6 +33,7 @@ config = {
         'http://127.0.0.1:8080',  # React
         'http://localhost:3000',
         'http://127.0.0.1:5000',
+        'http://127.0.0.1:3000',
         'https://xenodochial-poincare-85c4e7.netlify.app',
         'https://quirky-snyder-121fad.netlify.app/',
         "*"
@@ -47,6 +49,7 @@ ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
 app = Flask(__name__)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['CORS_HEADERS'] = 'Content-Type'
 app.config.from_mapping(
     BASE_URL="http://localhost:3000",
 )
@@ -66,6 +69,7 @@ def home():
 ############# Uploads #########################
 ############
 
+# TODO Multiclass
 @app.route('/uploadimages', methods=["POST"])
 def uploadimages():
     files = request.files
@@ -78,7 +82,8 @@ def uploadimages():
         for key in files:
             print(key)
             print(files[key])
-            files[key].save(os.path.join('./temp/predict/predict_'+key, 'jpg'))
+            image_name = 'predict_0.jpg'
+            files[key].save(os.path.join('./temp/predict/', image_name))
         status = 'success'
     elif request.form['input_type'] == 'retrain':
         className = request.form['class_name']
@@ -91,13 +96,13 @@ def uploadimages():
             files[key].save(os.path.join('./temp/retrain/', image_name))
         # Add data to CSV
         param = {
-            'existing_class': 'Y',
+            'existing_class': 'N' if className == 'add_new' else 'Y',
             'path': image_names,
             'class_id': className,
-            'csv_file_path': '',  # TODO add CSV PATH
+            'csv_file_path': '/content/drive/MyDrive/Inter_IIT_German_Traffic_Sign/German_Traffic_Sign_Recognition_Dataset/training_set/images_color.csv',  # TODO add CSV PATH
             'saved_images_directory': './temp/retrain/'
         }
-        #status = fnc.upload_class(param)
+        status = fnc.upload_class(param)
 
     # print(files)
     print(request.form)
@@ -158,16 +163,17 @@ def augment():
         augs_list.append(request.form)
 
     print(augs_list)
-    augs_list['prob'] = 1.0
+    #augs_list['prob'] = 1.0
 
     path = ''
-    
     if request.form['input_type'] == 'predict':
         path = './temp/predict/predict_0.jpg'
     elif request.form['input_type'] == 'retrain':
         path = './temp/retrain/retrain_0.jpg'
 
     image = augs.applyLoadedImage(augs_list, path)
+
+    cv2.imwrite('./display_images/'+request.form['input_type']+'_aug_image.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
     img = Image.fromarray(image.astype('uint8'))
     # create file-object in memory
@@ -216,14 +222,16 @@ def predict_preprocess():
     param = {}
     param['path'] = './display_images/predict_aug_image.png'
     img = fnc.load_image(param)
-    prepPara = request.form
+    prepPara = {}
+    for key in request.form:
+        prepPara[key] = json.loads(request.form[key])
 
     print(list(prepPara.keys()))
     print(list(prepPara.values()))
     images = fnc.preprocessing([img], list(prepPara.keys()), list(prepPara.values()))
     image = images[0]
 
-    cv.imwrite('./display_images/predict_prep_image.png', image)
+    cv2.imwrite('./display_images/predict_prep_image.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
     # plt.imshow(images[0])
 
     img = Image.fromarray(image.astype('uint8'))
@@ -242,16 +250,204 @@ def predict_preprocess():
 ############
 
 
-@app.route('/retrain', methods=['POST'])
-def retrain():
+retrain_model = None
+compiled_model = None
+trained_model = None
+X_values = []
+Y_values = []
+n_classes = 1
+xtrain = []
+xtest = []
+ytrain = []
+ytest = []
+model_name = 'new_model'
+
+
+@app.route('/retrain_balance', methods=['POST'])
+def balance():
+    '''
+    For Balancing data
+    '''
+    global augs_list
+    global X_values
+    global Y_values
+    global n_classes
+
+    param = request.form
+
+    print(request.form)
+
+    classKeys = json.loads(param['class_ids'])
+    classImgs = json.loads(param['class_numbers'])
+
+    param = {
+        'class_ids': classKeys,
+        'number_of_images': classImgs,
+        'common_val': param['common_val'],
+        'input_aug': augs_list,
+        'csv_path': '/content/drive/MyDrive/Inter_IIT_German_Traffic_Sign/German_Traffic_Sign_Recognition_Dataset/training_set/images_color.csv'
+    }
+
+    X_values, Y_values = fnc.balanced_dataset(param)
+
+    n_classes = len(set(Y_values))
+    #cv2.imwrite('./display_images/retrain_aug_image.png', cv2.cvtColor(X_values[0], cv2.COLOR_RGB2BGR))
+
+    data = {
+        'status': 'success',
+        'nValues': len(X_values),
+        'nClasses': n_classes
+    }
+
+    return data
+
+
+@app.route('/retrain_preprocess', methods=['POST'])
+def retrain_preprocess():
     '''
     For rendering results on HTML GUI
     '''
     global augs_list
-    prediction_list, class_id = baselinePredict.predict(request.form, augs_list)
+    global X_values
+
+    prepPara = {}
+    for key in request.form:
+        prepPara[key] = json.loads(request.form[key])
+
+    print(list(prepPara.keys()))
+    print(list(prepPara.values()))
+
+    print(X_values)
+    print(len(X_values))
+
+    images = fnc.preprocessing(X_values, list(prepPara.keys()), list(prepPara.values()))
+    X_values = images
+    image = images[0]
+
+    cv2.imwrite('./display_images/retrain_prep_image.png', cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
+
+    img = Image.fromarray(image.astype('uint8'))
+    file_object = io.BytesIO()
+    img.save(file_object, 'PNG')
+    file_object.seek(0)
+
+    return send_file(file_object, mimetype='image/PNG')
+
+
+@app.route('/retrain_segregate', methods=['POST'])
+def retrain_segregate():
+    '''
+    For rendering results on HTML GUI
+    '''
+    global augs_list
+    global X_values, Y_values
+    global xtrain, xtest, ytrain, ytest
+
+    model_path = '/content/drive/MyDrive/Inter_IIT_German_Traffic_Sign/German_Traffic_Sign_Recognition_Dataset/Sakshee_GTSRB_classification.h5'
+    name = request.form['segregation_type']
+    test_size = request.form['test_size']
+
+    model = load_model(model_path)
+    ypred = fnc.predict_model(model, X_values)
+    xtrain, xtest, ytrain, ytest = fnc.split(X_values, Y_values, model_path,
+                                             test_size=test_size, name=name, y_pred=ypred)
+
     data = {
-        "prediction_list": prediction_list,
-        "class_id": class_id
+        'status': 'success',
+        'nTrain': len(xtrain),
+        'nTest': len(xtest)
+    }
+    return data
+
+
+@app.route('/model_settings', methods=['POST'])
+def model_settings():
+    '''
+    For rendering results on HTML GUI
+    '''
+
+    global retrain_model
+    global n_classes
+    global model_name
+
+    param = {}
+    for key in request.form:
+        param[key] = json.loads(request.form[key])
+
+    model_name = request.form['model_name']
+
+    if request.form['retrain_type'] == 'Design':
+        param = {
+            'img_size': 32,
+            'channels': request.form['channels'],
+            'num_classes': n_classes,
+            'list1': request.form['layer_names'],  # ['Conv2D', 'MaxPool2D', 'Flatten', 'Dense'],
+            'list2': request.form['layer_settings']  # [[16, 3, 1, 'same', 'relu'], [2, 1, 'same'], [], [64, 'relu']]
+        }
+    elif request.form['retrain_type'] == 'Pretrained':
+        param = {
+            'img_size': 32,
+            'channels': request.form['channels'],
+            'num_classes': n_classes,
+            'list1': [request.form['pretrained_model']]
+        }
+
+    retrain_model = fnc.design_CNN(param)
+    retrain_model = fnc.pre_trained_softmax()
+    print(retrain_model)
+
+    data = {
+        'status': 'success'
+    }
+
+    return data
+
+
+@app.route('/compile', methods=['POST'])
+def compile():
+    '''
+    For rendering results on HTML GUI
+    '''
+
+    global retrain_model
+    global compiled_model
+    global n_classes
+
+    param = {}
+    for key in request.form:
+        param[key] = json.loads(request.form[key])
+
+    compiled_model = fnc.compile_model(param, retrain_model)
+    print(compiled_model)
+
+    data = {
+        'status': 'success'
+    }
+    return data
+
+
+@app.route('/train_model', methods=['POST'])
+def train_model():
+    '''
+    For rendering results on HTML GUI
+    '''
+
+    global compiled_model
+    global trained_model
+    global model_name
+    global xtrain, xtest, ytrain, ytest
+
+    param = {}
+    for key in request.form:
+        param[key] = json.loads(request.form[key])
+
+    batch_size = request.form['batch_size']
+    epochs = request.form['epochs']
+    trained_model = fnc.train_model(compiled_model, model_name, batch_size, epochs, xtrain, ytrain, xtest, ytest)
+    print(trained_model)
+
+    data = {
+        'status': 'success'
     }
 
     return data
@@ -260,8 +456,11 @@ def retrain():
 ############# END APIS #########################
 ################################################
 
+#CORS(app, resources={ r'/*': {'origins': config['ORIGINS']}}, supports_credentials=True)
+#CORS(app, resources={ r'/*': {"origins": "http://localhost:port"}}, supports_credentials=True)
 
-CORS(app, resources={r'/*': {'origins': config['ORIGINS']}}, supports_credentials=True)
+
+CORS(app, supports_credentials=True)
 
 if __name__ == "__main__":
     app.run()

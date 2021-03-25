@@ -810,9 +810,7 @@ def compile_model(d, model):
 
             opt = keras.optimizers.Adam(learning_rate, beta_1, beta_2, epsilon)
 
-    model = d['model']
     model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
-
     return model
 
 # sakshee/vartika
