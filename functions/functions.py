@@ -699,9 +699,6 @@ def preprocessing(X_data, preprocess_list, preprocess_parameters):
 
 # sakshee/vartika
 
-# sakshee/vartika
-
-
 def design_CNN(d):
     '''
     function: defines each CNN layer with corresponding parameters
@@ -718,21 +715,21 @@ def design_CNN(d):
     num_classes = d['num_classes']
     model = Sequential()
     input_shape = (img_size, img_size, channels)
-    model.add(InputLayer(input_shape))
+    model.add(Input(input_shape))
 
     for i, add in enumerate(d['list1']):
         if add == 'Conv2D':
             filters = d['list2'][i][0]
-            kernel_size = tuple(d['list2'][i][1], d['list2'][i][1])
-            strides = tuple(d['list2'][i][2], d['list2'][i][2])
+            kernel_size = (d['list2'][i][1], d['list2'][i][1])
+            strides = (d['list2'][i][2], d['list2'][i][2])
             padding = d['list2'][i][3]
             activation = d['list2'][i][4]
 
             model.add(Conv2D(filters, kernel_size, strides, padding, activation=activation))
 
         elif add == 'MaxPool2D':
-            pool_size = tuple(d['list2'][i][0], d['list2'][i][0])
-            strides = tuple(d['list2'][i][1], d['list2'][i][1])
+            pool_size = (d['list2'][i][0], d['list2'][i][0])
+            strides = (d['list2'][i][1], d['list2'][i][1])
             padding = d['list2'][i][2]
 
             model.add(MaxPool2D(pool_size, strides, padding))
