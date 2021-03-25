@@ -11,9 +11,9 @@ Original file is located at
 
 import csv
 import cv2
+import cv2 as cv
 import numpy as np
 from keras.layers import Input, Conv2D, MaxPool2D, Flatten, Dense, BatchNormalization, Dropout
-from augmentations import augmentations as augs
 from keras.applications.vgg16 import VGG16
 from keras.initializers import glorot_uniform
 from keras.models import Model, Sequential, load_model
@@ -40,6 +40,10 @@ import os
 import seaborn as sns
 import tf_explain
 from tf_explain.core.activations import ExtractActivations
+import albumentations as A
+from google.colab.patches import cv2_imshow
+
+from augmentations import augmentations as augs
 
 """Functions for Step 1"""
 
@@ -57,12 +61,14 @@ def visualize_classes(dict):
     y = []
     with open(dict['dataset_directory'], 'r') as f:
         reader = csv.reader(f)
+        header = next(reader)
         for row in reader:
-            label = int(row[0])
-            image = np.array([int(a) for a in row[1:]], dtype='uint8')
-            image = image.reshape((dict['size'], dict['size'],3))
-            x.append(image)
-            y.append(label)
+            if row[0] != '' and len(row[0]) != 0:
+                label = int(row[0])
+                image = np.array([int(a) for a in row[1:]], dtype='uint8')
+                image = image.reshape((dict['size'], dict['size'], 3))
+                x.append(image)
+                y.append(label)
 
     class_ids = list(set(y))
     number_of_images = []
@@ -73,7 +79,6 @@ def visualize_classes(dict):
         images.append(x[index])
 
     return class_ids, number_of_images, images
-
 # bharat
 
 
@@ -373,65 +378,67 @@ def create_data_under(d):
 
 # bharat
 
+
 def balanced_dataset(d):
-  # """
-  # function: returns balanced dataset
-  # :param d: d['class_ids'] = list of class ids specified by user
-  #           d['number_of_images'] = list of number of images users wants in a class
-  #           d['input_aug'] = list of all augmentations specified by user
-  #           d['csv_path'] = path of csv file 
-  #           d['common_val'] =  common_val
-  # :return: final list of augmented images and labels
-  # """
-  img_data, label_data = load_dataset(d['csv_path'], size_of_image=32)
-  n_classes= len(set(label_data))
+    # """
+    # function: returns balanced dataset
+    # :param d: d['class_ids'] = list of class ids specified by user
+    #           d['number_of_images'] = list of number of images users wants in a class
+    #           d['input_aug'] = list of all augmentations specified by user
+    #           d['csv_path'] = path of csv file
+    #           d['common_val'] =  common_val
+    # :return: final list of augmented images and labels
+    # """
+    img_data, label_data = load_dataset(d['csv_path'], size_of_image=32)
+    n_classes = len(set(label_data))
 
-  var_num={}
-  for i in range(0, n_classes):
-    var_num[i]= int(d['common_val'])
+    var_num = {}
+    for i in range(0, n_classes):
+        var_num[i] = int(d['common_val'])
 
-  for idx, key in enumerate(d['class_ids']):
-      var_num[key]= d['number_of_images'][idx]
+    for idx, key in enumerate(d['class_ids']):
+        var_num[key] = d['number_of_images'][idx]
 
-  # d_list_to_dict = {'list1':d['class_ids'], 'list2':d['number_of_images']}
-  # var_num = list_to_dictionary(d_list_to_dict)
+    # d_list_to_dict = {'list1':d['class_ids'], 'list2':d['number_of_images']}
+    # var_num = list_to_dictionary(d_list_to_dict)
 
-  unique, counts = np.unique(label_data, return_counts=True)
-  num_per_class = dict(zip(unique, counts))
+    unique, counts = np.unique(label_data, return_counts=True)
+    num_per_class = dict(zip(unique, counts))
 
-  images_lst = []
-  labels_lst = []
-  d['img_data'] = img_data
-  d['label_data'] = label_data
+    images_lst = []
+    labels_lst = []
+    d['img_data'] = img_data
+    d['label_data'] = label_data
 
-  for i in range(len(unique)):
-      diff = var_num[i] - num_per_class[i]
-      if diff == 0:
-          mask = [int(x) == i for x in label_data]
-          images = np.array(img_data)[mask]
-          labels = np.array(label_data)[mask]
-          images_lst.append(images)
-          labels_lst.append(labels)
-      elif diff > 0:
-          d_create_data_over = {'img_data':d['img_data'], 'label_data':d['label_data'], 'i':i, 'diff':diff,
-                                'input_aug':d['input_aug']}
-          images, labels = create_data_over(d_create_data_over)
-          images_lst.append(images)
-          labels_lst.append(labels)
-      elif diff < 0:
-          d_create_data_under = {'img_data': d['img_data'], 'label_data': d['label_data'], 'i': i, 'diff': -diff}
-          images, labels = create_data_under(d_create_data_under)
-          images_lst.append(images)
-          labels_lst.append(labels)
+    for i in range(len(unique)):
+        diff = var_num[i] - num_per_class[i]
+        if diff == 0:
+            mask = [int(x) == i for x in label_data]
+            images = np.array(img_data)[mask]
+            labels = np.array(label_data)[mask]
+            images_lst.append(images)
+            labels_lst.append(labels)
+        elif diff > 0:
+            d_create_data_over = {'img_data': d['img_data'], 'label_data': d['label_data'], 'i': i, 'diff': diff,
+                                  'input_aug': d['input_aug']}
+            images, labels = create_data_over(d_create_data_over)
+            images_lst.append(images)
+            labels_lst.append(labels)
+        elif diff < 0:
+            d_create_data_under = {'img_data': d['img_data'], 'label_data': d['label_data'], 'i': i, 'diff': -diff}
+            images, labels = create_data_under(d_create_data_under)
+            images_lst.append(images)
+            labels_lst.append(labels)
 
-  del img_data, label_data
+    del img_data, label_data
 
-  X_data = np.concatenate(images_lst, axis=0)
-  del images_lst
-  Y_data = np.concatenate(labels_lst, axis=0)
-  del labels_lst
+    X_data = np.concatenate(images_lst, axis=0)
+    del images_lst
+    Y_data = np.concatenate(labels_lst, axis=0)
+    del labels_lst
 
-  return X_data, Y_data
+    return X_data, Y_data
+
 
 """Smart Segregation Functions"""
 
@@ -707,20 +714,19 @@ def preprocessing(X_data, preprocess_list, preprocess_parameters):
 """Re-training Functions"""
 
 # sakshee/vartika
-
 # sakshee/vartika
 
 
 def design_CNN(d):
-    '''
-    function: defines each CNN layer with corresponding parameters
-    param: d - d['list1'] = ['Conv2D', 'MaxPool2D', 'Flatten', 'Dense', 'BatchNormalization', 'Dropout']
-               d['list2'] = [[16, 3, 1, 'same', 'relu'], [2, 1, 'same'], [], [64, 'relu'], [], [0.2]]
-               d['img_size'] = img_size
-               d['channels'] = channels
-               d['num_classes'] = num_classes
-    returns: predictions on test set (predictions[1] = value of accuracy on test set)
-    '''
+    # '''
+    # function: defines each CNN layer with corresponding parameters
+    # param: d - d['list1'] = ['Conv2D', 'MaxPool2D', 'Flatten', 'Dense', 'BatchNormalization', 'Dropout']
+    #            d['list2'] = [[16, 3, 1, 'same', 'relu'], [2, 1, 'same'], [], [64, 'relu'], [], [0.2]]
+    #            d['img_size'] = img_size
+    #            d['channels'] = channels
+    #            d['num_classes'] = num_classes
+    # returns: model
+    # '''
 
     img_size = d['img_size']
     channels = d['channels']
@@ -731,8 +737,9 @@ def design_CNN(d):
 
     for i, add in enumerate(d['list1']):
         if add == 'Conv2D':
+            print(d['list2'][i])
             filters = d['list2'][i][0]
-            kernel_size = (d['list2'][i][1], d['list2'][i][1])
+            kernel_size = (d['list2'][i][1])
             strides = (d['list2'][i][2], d['list2'][i][2])
             padding = d['list2'][i][3]
             activation = d['list2'][i][4]
@@ -740,16 +747,18 @@ def design_CNN(d):
             model.add(Conv2D(filters, kernel_size, strides, padding, activation=activation))
 
         elif add == 'MaxPool2D':
+            print(d['list2'][i])
             pool_size = (d['list2'][i][0], d['list2'][i][0])
             strides = (d['list2'][i][1], d['list2'][i][1])
-            padding = d['list2'][i][2]
+            # padding = d['list2'][i][2]
 
-            model.add(MaxPool2D(pool_size, strides, padding))
+            model.add(MaxPool2D(pool_size, strides))
 
         elif add == 'Flatten':
             model.add(Flatten())
 
         elif add == 'Dense':
+            print(d['list2'][i])
             units = d['list2'][i][0]
             activation = d['list2'][i][1]
 
@@ -759,6 +768,7 @@ def design_CNN(d):
             model.add(BatchNormalization())
 
         elif add == 'Dropout':
+            print(d['list2'][i])
             rate = d['list2'][i][0]
 
             model.add(Dropout(rate=rate))
@@ -770,67 +780,74 @@ def design_CNN(d):
     # model.add(BatchNormalization())
     # model.add(Dropout(rate=0.5))
     # model.add(Dense(num_classes, activation='softmax'))
-
     return model
+
+
 # sakshee
 
-
+# sakshee
 def compile_model(d, model):
-    '''.
-    param: d - d['opt_list1'] = ['SGD', 'RMSprop', 'Adam']
-               d['opt_list2'] = [[0.001, 0.9, 0.01], [0.001, 0, 0.9, 1e-07], [0.001, 0.9, 0.99, 1e-07]]
-               d['model'] = designed model
-    returns: compiled model
-    '''
+    # '''.
+    # param: d - d['opt_list1'] = ['Adam']
+    #            d['opt_list2'] = [[0.001, 0.9, 0.01], [0.001, 0, 0.9, 1e-07], [0.001, 0.9, 0.99, 1e-07]]
+    #            d['model'] = designed model
+    # returns: compiled model
+    # '''
 
-    for i, optimizer in enumerate(d['opt_list1']):
-        if optimizer == 'SGD':
+    # for i, optimizer in enumerate(d['opt_list1']):
+    optimizer = d['opt_list1'][0]
+    if optimizer == 'SGD':
 
-            learning_rate = d['opt_list2'][i][0]
-            momentum = d['opt_list2'][i][1]
-            decay = d['opt_list2'][i][2]
+        learning_rate = d['opt_list2'][0]
+        momentum = d['opt_list2'][1]
+        decay = d['opt_list2'][2]
 
-            opt = keras.optimizers.SGD(learning_rate, momentum, decay)
+        opt = SGD(learning_rate, momentum, decay)
 
-        elif optimizer == 'RMSprop':
+    elif optimizer == 'RMSprop':
 
-            learning_rate = d['opt_list2'][i][0]
-            momentum = d['opt_list2'][i][1]
-            rho = d['opt_list2'][i][2]
-            epsilon = d['opt_list2'][i][3]
+        learning_rate = d['opt_list2'][0]
+        momentum = d['opt_list2'][1]
+        rho = d['opt_list2'][2]
+        epsilon = d['opt_list2'][3]
 
-            opt = keras.optimizers.RMSprop(learning_rate, rho, momentum, epsilon)
+        opt = RMSprop(learning_rate, rho, momentum, epsilon)
 
-        elif optimizer == 'Adam':
+    elif optimizer == 'Adam':
 
-            learning_rate = d['opt_list2'][i][0]
-            beta_1 = d['opt_list2'][i][1]
-            beta_2 = d['opt_list2'][i][2]
-            epsilon = d['opt_list2'][i][3]
+        learning_rate = d['opt_list2'][0]
+        beta_1 = d['opt_list2'][1]
+        beta_2 = d['opt_list2'][2]
+        epsilon = d['opt_list2'][3]
 
-            opt = keras.optimizers.Adam(learning_rate, beta_1, beta_2, epsilon)
+        opt = Adam(learning_rate, beta_1, beta_2, epsilon)
 
     model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
+
     return model
+
+# sakshee/vartika
 
 # sakshee/vartika
 
 
 def pre_trained_softmax(d):
-    '''
-    param: d - d['list1'] = ['ResNet50', 'VGG16', 'VGG19', 'InceptionV3', 'Xception']
-             - d['num_classes'] = num_classes
-             - d['img_size'] = img_size
-             - d['channels'] = channels
+    #  '''
+    #   param: d - d['list1'] = ['ResNet50', 'VGG16', 'VGG19', 'InceptionV3', 'Xception']
+    #            - d['num_classes'] = num_classes
+    #            - d['img_size'] = img_size
+    #            - d['channels'] = channels
 
-    returns: pre_trained designed model
-    '''
+    #   returns: pre_trained designed model
+    #   '''
+
     img_size = d['img_size']
     channels = d['channels']
     num_classes = d['num_classes']
     input_shape = (img_size, img_size, channels)
 
     for i, pre_trained in enumerate(d['list1']):
+
         if pre_trained == 'ResNet50':
             model = ResNet50(include_top=True, weights='imagenet', input_shape=(img_size, img_size, channels))
             model.pop()
@@ -838,6 +855,7 @@ def pre_trained_softmax(d):
             layer_count = len(model.layers)
             for l in range(layer_count-1):
                 model.layers[l].trainable = False
+
         elif pre_trained == 'VGG16':
             model = VGG16(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
             model.pop()
@@ -869,8 +887,8 @@ def pre_trained_softmax(d):
             layer_count = len(model.layers)
             for l in range(layer_count-1):
                 model.layers[l].trainable = False
-    return model
 
+    return model
 # sakshee
 
 
@@ -951,41 +969,82 @@ def ensemble(models_dict, no_of_models):
 
 # yuvnish
 
-
 def model_summary(model):
-    '''
-    function: returns summary of model to check which layers are present in the model
-    param: model - saved model
-    returns: summarry of model
-    '''
+    # '''
+    # function: returns summary of model to check which layers are present in the model
+    # param: model - saved model
+    # returns: summarry of model
+    # '''
     return model.summary()
 
 # ankur
 
 
-def visualise_activations(layer_name, model):
-    '''
-    function: to visualize output after a specific layer of model
-    param: layer_name - name of layer of model whose output is needed
-           model - saved model
-    returns: output image
-    '''
-    explainer = ExtractActovations()
-    grid = explainer.explain((to_predict, None), model, [layer_name])
-    fig, ax = plt.subplots(1, 1, figsize=(32, 32))
-    ax[0].imshow(grid, cmap='binary_r')
+def visualise_activations(layer_name, model, input_data, datadir, img_size):
+    # '''
+    # function: to visualize output after a specific layer of model
+    # param: layer_name - name of layer of model whose output is needed
+    #        model - saved model
+    # returns: plot file-path string OR list of file-paths to plots
+    # '''
+    if type(input_data) != list:
+        image = load_img(input_data, target_size=(img_size, img_size))
+        image = img_to_array(image)
+        image_l = [image]
 
-# yuvnish
+        grid = explainer.explain((np.array(image_l), None), model, [layer_name])
+        cv.applyColorMap(grid, cv.COLORMAP_HOT)
+        grid = cv.resize(grid, dsize=(10, 10))
+        plot_save_path = datadir + 'AL0' + '.png'
+        cv.imwrite(plot_save_path, grid)
 
+        return plot_save_path
+
+    else:
+        image_l = input_data
+
+    explainer = ExtractActivations()
+    plot_save_path_l = []
+    for i in range(len(image_l)):
+        grid = explainer.explain((np.array([image_l[i]]), None), model, [layer_name])
+        cv.applyColorMap(grid, cv.COLORMAP_HOT)
+        grid = cv.resize(grid, dsize=(10, 10))
+        plot_save_path = datadir + 'AL' + str(i) + '.png'
+        cv.imwrite(plot_save_path, grid)
+        plot_save_path_l.append(plot_save_path)
+
+    return plot_save_path_l
+
+# ankur
+
+
+def visualise_occlusion_sensitivity(model, class_label, image_path, datadir, patch_size=3, img_size=32):
+    # '''
+    # function: to visualize output after a specific layer of model
+    # param: layer_name - name of layer of model whose output is needed
+    #        model - saved model
+    # returns: string file-path to outputplot
+    # '''
+    image = load_img(image_path, target_size=(img_size, img_size))
+    image = img_to_array(image)
+
+    explainer = OcclusionSensitivity()
+    grid = explainer.explain(([image], None), model, class_label, patch_size)
+    grid = cv.resize(grid, dsize=(10, 10))
+
+    plot_save_path = datadir + "OS.png"
+    cv.imwrite(plot_save_path, grid)
+    
+    return plot_save_path
 
 def Classification_report(x, y, model):
-    '''
-    function: returns classification report of model on data passed
-    param: x - list of images
-           y - list of labels
-           model - saved model
-    returns: classification report of model on data
-    '''
+    # '''
+    # function: returns classification report of model on data passed
+    # param: x - list of images
+    #        y - list of labels
+    #        model - saved model
+    # returns: classification report of model on data
+    # '''
     x = numpy.array(x)
     y = numpy.array(y)
     y = to_categorical(y)
@@ -998,12 +1057,12 @@ def Classification_report(x, y, model):
 
 
 def accuracy_and_loss_plot(model, datadir):
-    '''
-    function: plots of accuracy and loss
-    param: model - saved model
-           datadir - path where plots needs to be saved
-    returns: path where lots are saved
-    '''
+    # '''
+    # function: plots of accuracy and loss
+    # param: model - saved model
+    #        datadir - path where plots needs to be saved
+    # returns: path where lots are saved
+    # '''
     plt.plot(model.history.history['accuracy'], label='Train_accuracy')
     plt.plot(model.history.history['val_accuracy'], label='Test_accuracy')
     plt.title('Model Accuracy')
@@ -1018,20 +1077,22 @@ def accuracy_and_loss_plot(model, datadir):
     plt.title('Model Loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
+    plt.legend(loc="upper left")
     output_path_loss = os.path.join(d['datadir'], 'loss.png')
     plt.savefig(output_path_loss)
     return output_path_accuracy, output_path_loss
 
-# harshita/ sakshee/ muskan
+#harshita/ sakshee/ muskan
 
 
-def plot_cm(Y_test, y_pred, figsize=(16, 16)):
-    '''
-    function: plots confusion matrix and returns data frame
-    param: model - saved model
-           datadir - path where plots needs to be saved
-    returns: path where lots are saved
-    '''
+def plot_cm(Y_test, y_pred, datadir, figsize=(16, 16)):
+    # '''
+    # function: plots confusion matrix and returns data frame
+    # param: Y_test - list of labels
+    #        y_pred - predictions of model
+    #        datadir - path where plots needs to be saved
+    # returns: path where lots are saved
+    # '''
     cm = confusion_matrix(Y_test, y_pred, labels=np.unique(Y_test))
     cm_sum = np.sum(cm, axis=1, keepdims=True)
     cm_perc = cm / cm_sum.astype(float) * 100
@@ -1068,15 +1129,15 @@ def plot_cm(Y_test, y_pred, figsize=(16, 16)):
 
 
 def bargraphs(model, x_test, y_test, n_classes, datadir):
-    '''
-    function: bar chart plot function
-    param: model = saved model
-           n_classes - number of classes
-           datadir - path where plot needs to be saved
-           x_test = test set images
-           y_test = test set labels
-    return:
-    '''
+    # '''
+    # function: bar chart plot function
+    # param: model = saved model
+    #        n_classes - number of classes
+    #        datadir - path where plot needs to be saved
+    #        x_test = test set images
+    #        y_test = test set labels
+    # return:
+    # '''
     ypred = predict_model(model, x_test)
     df, _ = plot_cm(y_test, ypred, (16, 16))
     classes = list(range(n_classes))
@@ -1093,3 +1154,82 @@ def bargraphs(model, x_test, y_test, n_classes, datadir):
     output_path_bar_chart = os.path.join(d['datadir'], 'bar_chart.png')
     plt.savefig(output_path_bar_chart)
     return output_path_bar_chart
+
+
+def assess_model_from_pb(model_file_path, xtest: np.ndarray, ytest: np.ndarray, save_plot_path):
+    '''
+    function: plot the one vs all roc-auc curve
+    input param: model_file_path: path of the saved model
+                 xtest: in numpy array format
+                 ytest: in numpy array format
+                 save_plot_path: path where you want the roc curve to be saved
+
+    '''
+    class_labels = range(43)
+    model = load_model(model_file_path)  # load model from filepath
+    # extract dense output layer (will be softmax probabilities)
+    feature_extractor = Model(inputs=model.inputs, outputs=model.get_layer('dense').output)
+    y_score = feature_extractor.predict(xtest, batch_size=64)  # one hot encoded softmax predictions
+    ytest_binary = label_binarize(ytest, classes=range(43))  # one hot encode the test data true labels
+    n_classes = 43
+
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
+    # compute fpr and tpr with roc_curve from the ytest true labels to the scores
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(ytest_binary[:, i], y_score[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    # plot each class  curve on single graph for multi-class one vs all classification
+    pallet = ['#6a89cc', '#4a69bd', '#1e3799', '#0c2461', '#82ccdd', '#60a3bc', '#FF1493', '#00FFFF', '#1E90FF', '#808080', '#FAF0E6', '#FFE4E1', '#2E8B57', '#FFFF00', '#87CEFA',
+              '#8A2BE2', '#CD5C5C', '#B0E0E6', '#00008B', '#00FF7F', '#FF4500', '#00BFFF', '#7FFF00', '#191970', '#0000FF', '#0000CD', '#483D8B', '#F0E68C', '#7B68EE', '#C71585',
+              '#DB7093', '#FFA07A', '#FF7F50', '#FF00FF', '#DA70D6', '#DDA0DD', '#20B2AA', '#48D1CC', '#F4A460', '#B8860B', '#D2691E', '#696969', '#98FB98', '#7CFC00', '#3CB371',
+              '#556B2F', '#66CDAA', '#008080', '#AFEEEE', '#F0F8FF', '#FAEBD7', '#7FFFD4', '#F0FFFF', '#F5F5DC', '#FFE4C4', '#FFEBCD', '#000000', '#A52A2A', '#8B008B', '#8B0000',
+              '#9400D3', '#DCDCDC', '#ADFF2F', '#FFFACD', '#800000', '900000', '#FFE4B5', '#000080', '#808000', '#CD853F', '#FF0000', '#4169E1', '#800080', '#8B4513', '#A0522D',
+              '#C0C0C0', '#87CEEB']
+    colors = deque(pallet[:43])
+    plt.figure(figsize=(10, 10))
+    for i, color, lbl in zip(range(n_classes), colors, class_labels):
+
+        plt.plot(fpr[i], tpr[i], color=color, lw=1.5,
+                 label='ROC Curve of class {0} (area = {1:0.3f})'.format(lbl, roc_auc[i]))
+
+    plt.plot([0, 1], [0, 1], 'k--', lw=1.5)
+    plt.xlim([-0.05, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=2, fontsize=8)
+    fullpath = save_plot_path.joinpath(save_plot_path.stem + '_roc_curve.png')
+    plt.savefig(fullpath)
+
+
+def str_img(txt, datadir_path):
+    if type(txt) == 'dict':
+        txt = json.dumps(txt)
+        d = ImageDraw.Draw(img)
+        d.text((10, 10), str(txt), fill=(0, 0, 0))
+        output_path = os.path.join(datadir_path, 'pil_text.png')
+        img.save(output_path)
+        PImage(output_path)
+    else:
+        img = Image.new('RGB', (100, 30), color='white')
+        d = ImageDraw.Draw(img)
+        d.text((10, 10), str(txt), fill=(0, 0, 0))
+        output_path = os.path.join(datadir_path, 'pil_text.png')
+        img.save(output_path)
+        PImage(output_path)
+
+
+def visualize_all(X_test, Y_test, y_pred, n_classes, datadir, model_file_path, img_path, patch_size=3, img_size=32):
+    saved_model = load_model(model_file_path)
+    accuracy_and_loss_plot(saved_model, datadir)
+    assess_model_from_pb(model_file_path, X_test, Y_test, datadir)
+    bargraphs(saved_model, X_test, Y_test, n_classes, datadir, y_pred)
+    visualise_activations(model, img_path, datadir, img_size)
+    m = max(y_pred)
+    class_label = y_pred.index(m)
+    visualise_occlusion_sensitivity(model, class_label, patch_size, image_path, datadir, img_size)
+    Classification_report(X_test, Y_test, model)
+    str_img(Classification_report, datadir)
