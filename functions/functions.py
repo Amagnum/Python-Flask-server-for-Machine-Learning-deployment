@@ -253,19 +253,6 @@ def augment_batch(d):
 Loading Saved Model
 """
 
-#yuvnish, vartika
-
-
-def load_model(dict):
-    """
-    function: loads pre-trained neural network
-    :param dict: dict['path'] = 'C:/users/desktop/uploads/model_v1.h5'
-    :return: model
-    """
-    model = load_model(dict['path'])
-    return model
-
-
 """Loading the Dataset"""
 
 #yuvnish, vartika
