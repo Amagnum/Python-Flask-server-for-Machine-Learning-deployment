@@ -43,7 +43,7 @@ from tf_explain.core.activations import ExtractActivations
 
 """Functions for Step 1"""
 
-#yuvnish, vartika
+# yuvnish, vartika
 
 
 def visualize_classes(dict):
@@ -103,7 +103,7 @@ def display_batch_of_images(images, datadir, labels=None):
     function: displays batch of images
     :param images: list of images
            labels: list of labels
-           datadir: where the plot needs to be saved 
+           datadir: where the plot needs to be saved
     :return: output path of saved plot
     """
     cols = 11
@@ -134,7 +134,7 @@ def display_batch_of_images(images, datadir, labels=None):
     plt.savefig(output_path)
     return output_path
 
-#yuvnish, vartika
+# yuvnish, vartika
 
 
 def visualize_image_distribution(d):
@@ -156,7 +156,7 @@ def visualize_image_distribution(d):
     plt.savefig(output_path)
     return output_path
 
-#yuvnish, vartika
+# yuvnish, vartika
 
 
 def upload_class(dict):
@@ -198,7 +198,7 @@ def upload_class(dict):
 
 """Uploading Single Image"""
 
-#yuvnish, vartika
+# yuvnish, vartika
 
 
 def load_image(dict):
@@ -217,7 +217,7 @@ def load_image(dict):
 Augmentation Functions
 """
 
-#yuvnish, vartika
+# yuvnish, vartika
 
 
 def list_to_dictionary(d):
@@ -255,7 +255,7 @@ Loading Saved Model
 
 """Loading the Dataset"""
 
-#yuvnish, vartika
+# yuvnish, vartika
 
 
 def load_dataset(csv_file_path, size_of_image=32):
@@ -373,57 +373,65 @@ def create_data_under(d):
 
 # bharat
 
-
 def balanced_dataset(d):
-    """
-    function: returns balanced dataset
-    :param d: d['class_ids'] = list of class ids specified by user
-              d['number_of_images'] = list of number of images users wants in a class
-              d['input_aug'] = list of all augmentations specified by user
-              d['csv_path'] = path of csv file 
-    :return: final list of augmented images and labels
-    """
-    img_data, label_data = load_dataset(d['csv_path'], size_of_image=32)
-    d_list_to_dict = {'list1': d['class_ids'], 'list2': d['number_of_images']}
-    var_num = list_to_dictionary(d_list_to_dict)
+  # """
+  # function: returns balanced dataset
+  # :param d: d['class_ids'] = list of class ids specified by user
+  #           d['number_of_images'] = list of number of images users wants in a class
+  #           d['input_aug'] = list of all augmentations specified by user
+  #           d['csv_path'] = path of csv file 
+  #           d['common_val'] =  common_val
+  # :return: final list of augmented images and labels
+  # """
+  img_data, label_data = load_dataset(d['csv_path'], size_of_image=32)
+  n_classes= len(set(label_data))
 
-    unique, counts = np.unique(label_data, return_counts=True)
-    num_per_class = dict(zip(unique, counts))
+  var_num={}
+  for i in range(0, n_classes):
+    var_num[i]= int(d['common_val'])
 
-    images_lst = []
-    labels_lst = []
-    d['img_data'] = img_data
-    d['label_data'] = label_data
+  for idx, key in enumerate(d['class_ids']):
+      var_num[key]= d['number_of_images'][idx]
 
-    for i in d['class_ids']:
-        diff = var_num[i] - num_per_class[i]
-        if diff == 0:
-            mask = [int(x) == i for x in label_data]
-            images = img_data[mask]
-            labels = label_data[mask]
-            images_lst.append(images)
-            labels_lst.append(labels)
-        elif diff > 0:
-            d_create_data_over = {'img_data': d['img_data'], 'label_data': d['label_data'], 'i': i, 'diff': diff,
-                                  'input_aug': d['input_aug']}
-            images, labels = create_data_over(d_create_data_over)
-            images_lst.append(images)
-            labels_lst.append(labels)
-        elif diff < 0:
-            d_create_data_under = {'img_data': d['img_data'], 'label_data': d['label_data'], 'i': i, 'diff': -diff}
-            images, labels = create_data_under(d_create_data_under)
-            images_lst.append(images)
-            labels_lst.append(labels)
+  # d_list_to_dict = {'list1':d['class_ids'], 'list2':d['number_of_images']}
+  # var_num = list_to_dictionary(d_list_to_dict)
 
-    del img_data, label_data
+  unique, counts = np.unique(label_data, return_counts=True)
+  num_per_class = dict(zip(unique, counts))
 
-    X_data = np.concatenate(images_lst, axis=0)
-    del images_lst
-    Y_data = np.concatenate(labels_lst, axis=0)
-    del labels_lst
+  images_lst = []
+  labels_lst = []
+  d['img_data'] = img_data
+  d['label_data'] = label_data
 
-    return X_data, Y_data
+  for i in range(len(unique)):
+      diff = var_num[i] - num_per_class[i]
+      if diff == 0:
+          mask = [int(x) == i for x in label_data]
+          images = np.array(img_data)[mask]
+          labels = np.array(label_data)[mask]
+          images_lst.append(images)
+          labels_lst.append(labels)
+      elif diff > 0:
+          d_create_data_over = {'img_data':d['img_data'], 'label_data':d['label_data'], 'i':i, 'diff':diff,
+                                'input_aug':d['input_aug']}
+          images, labels = create_data_over(d_create_data_over)
+          images_lst.append(images)
+          labels_lst.append(labels)
+      elif diff < 0:
+          d_create_data_under = {'img_data': d['img_data'], 'label_data': d['label_data'], 'i': i, 'diff': -diff}
+          images, labels = create_data_under(d_create_data_under)
+          images_lst.append(images)
+          labels_lst.append(labels)
 
+  del img_data, label_data
+
+  X_data = np.concatenate(images_lst, axis=0)
+  del images_lst
+  Y_data = np.concatenate(labels_lst, axis=0)
+  del labels_lst
+
+  return X_data, Y_data
 
 """Smart Segregation Functions"""
 
@@ -554,7 +562,8 @@ def kennard_stone(x, y, test_size, model_path):
 
 # bharat
 
-def split(x_data,y_data, model_path, test_size=0.2, name='Normal', y_pred=None):
+
+def split(x_data, y_data, model_path, test_size=0.2, name='Normal', y_pred=None):
     """
     functions: splits the data into train and test set
     :param name: type of segregation (default value = 'Normal')
@@ -565,7 +574,7 @@ def split(x_data,y_data, model_path, test_size=0.2, name='Normal', y_pred=None):
     :param y_pred: predicted labels (default value is None, user specified if name=Difficult_samples)
     :return: train and test set images and labels based on method specified by user
     """
-    #x_data, y_data = load_dataset(csv_file_path=csv_file_path, size_of_image=32)
+    # x_data, y_data = load_dataset(csv_file_path=csv_file_path, size_of_image=32)
     x_data = np.array(x_data)
     y_data = np.array(y_data)
     if name == "Normal":
@@ -588,7 +597,7 @@ def split(x_data,y_data, model_path, test_size=0.2, name='Normal', y_pred=None):
 """Functions for Preprocessing of Image """
 
 
-#bharat/ vartika
+# bharat/ vartika
 
 
 def adjust_gamma(image, gamma=2.0):
@@ -604,7 +613,7 @@ def adjust_gamma(image, gamma=2.0):
     table = np.array([((i / 255.0)**invGamma)*255 for i in np.arange(0, 256)]).astype("uint8")
     return cv2.LUT(image, table)
 
-#bharat/ vartika
+# bharat/ vartika
 
 
 def CLAHE_colored(image):
@@ -622,7 +631,7 @@ def CLAHE_colored(image):
     image = cv2.cvtColor(image, cv2.COLOR_LAB2BGR)
     return image
 
-#bharat/ vartika
+# bharat/ vartika
 
 
 def preprocessing(X_data, preprocess_list, preprocess_parameters):
@@ -634,7 +643,7 @@ def preprocessing(X_data, preprocess_list, preprocess_parameters):
       returns: list of pre processed images
     """
 
-    #preprocess_list = ['adjust_gamma', 'CLAHE', 'denoise', 'binary_filter', 'edge_filter', 'normalize', 'standardize']
+    # preprocess_list = ['adjust_gamma', 'CLAHE', 'denoise', 'binary_filter', 'edge_filter', 'normalize', 'standardize']
     # default preprocess_list=
     # preprocess_parameters = [{'gamma': 2.0}, '{'coloured': y/n}', {'h': value, 'hcolor': value, templateWindowSize': value, 'searchWindowSize': value} , ....]
     # Note - 1) Use anyone from adjust_gamma or denoise(both results in decrease of quality)
@@ -698,6 +707,9 @@ def preprocessing(X_data, preprocess_list, preprocess_parameters):
 """Re-training Functions"""
 
 # sakshee/vartika
+
+# sakshee/vartika
+
 
 def design_CNN(d):
     '''
@@ -902,7 +914,7 @@ def evaluate_model(model, X_test, Y_test):
 
     return evaluations
 
-#yuvnish, vartika
+# yuvnish, vartika
 
 
 def predict_model(model, X):
@@ -1012,7 +1024,7 @@ def accuracy_and_loss_plot(model, datadir):
     plt.savefig(output_path_loss)
     return output_path_accuracy, output_path_loss
 
-#harshita/ sakshee/ muskan
+# harshita/ sakshee/ muskan
 
 
 def plot_cm(Y_test, y_pred, figsize=(16, 16)):
