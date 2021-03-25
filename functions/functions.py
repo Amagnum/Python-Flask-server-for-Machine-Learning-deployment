@@ -318,8 +318,8 @@ def create_data_over(d):
               d['input_aug'] = list of augmentations user specifies
     :return: list of oversampled images and labels
     """
-    img_data = d['img_data']
-    label_data = d['label_data']
+    img_data = np.array(d['img_data'])
+    label_data = np.array(d['label_data'])
     i = d['i']
     diff = d['diff']
     input_aug = d['input_aug']
@@ -367,11 +367,11 @@ def create_data_under(d):
               d['diff'] = number of images to be added
     :return: list of undersampled images and labels
     """
-    img_data = d['img_data']
-    label_data = d['label_data']
+    img_data = np.array(d['img_data'])
+    label_data = np.array(d['label_data'])
     i = d['i']
     diff = d['diff']
-    mask = [int(x) == i for x in label_data]
+    mask = [int(x) == i for x in label_data.tolist()]
     images = img_data[mask]
     del img_data
     labels = label_data[mask]
@@ -713,12 +713,13 @@ def preprocessing(X_data, preprocess_list, preprocess_parameters):
 
 # sakshee/vartika
 
+# sakshee/vartika
+
 
 def design_CNN(d):
     '''
     function: defines each CNN layer with corresponding parameters
-    param: d - d['listc'] = ['Decision tree', 'SVC', 'KNN', 'Random Forest']
-               d['list1'] = ['Conv2D', 'MaxPool2D', 'Flatten', 'Dense', 'BatchNormalization', 'Dropout']
+    param: d - d['list1'] = ['Conv2D', 'MaxPool2D', 'Flatten', 'Dense', 'BatchNormalization', 'Dropout']
                d['list2'] = [[16, 3, 1, 'same', 'relu'], [2, 1, 'same'], [], [64, 'relu'], [], [0.2]]
                d['img_size'] = img_size
                d['channels'] = channels
@@ -737,15 +738,15 @@ def design_CNN(d):
         if add == 'Conv2D':
             filters = d['list2'][i][0]
             kernel_size = tuple(d['list2'][i][1], d['list2'][i][1])
-            strides = tuple(d['list2'][i][2], d['list'][i][2])
+            strides = tuple(d['list2'][i][2], d['list2'][i][2])
             padding = d['list2'][i][3]
-            activation = d['list'][i][4]
+            activation = d['list2'][i][4]
 
             model.add(Conv2D(filters, kernel_size, strides, padding, activation=activation))
 
         elif add == 'MaxPool2D':
             pool_size = tuple(d['list2'][i][0], d['list2'][i][0])
-            strides = tuple(d['list2'][i][1], d['list'][i][1])
+            strides = tuple(d['list2'][i][1], d['list2'][i][1])
             padding = d['list2'][i][2]
 
             model.add(MaxPool2D(pool_size, strides, padding))
@@ -754,8 +755,8 @@ def design_CNN(d):
             model.add(Flatten())
 
         elif add == 'Dense':
-            units = d['list'][i][0]
-            activation = d['list'][i][1]
+            units = d['list2'][i][0]
+            activation = d['list2'][i][1]
 
             model.add(Dense(units, activation))
 
@@ -763,7 +764,7 @@ def design_CNN(d):
             model.add(BatchNormalization())
 
         elif add == 'Dropout':
-            rate = d['list'][i][0]
+            rate = d['list2'][i][0]
 
             model.add(Dropout(rate=rate))
 
@@ -776,7 +777,6 @@ def design_CNN(d):
     # model.add(Dense(num_classes, activation='softmax'))
 
     return model
-
 # sakshee
 
 
