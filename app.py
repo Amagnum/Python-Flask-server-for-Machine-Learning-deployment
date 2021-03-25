@@ -377,12 +377,13 @@ def cnn_add_layer():
       layerValues = []
     else: 
       layerNames.append(request.form['layer_name'])
-      layerValues.append(request.form['layer_value'])
+      layerValues.append(json.loads(request.form['layer_value']))
     
     
     print(layerNames)
     print(layerValues)
     print(json.loads(request.form['layer_value']))
+
     data = {
         'status': 'success',
     }
@@ -398,7 +399,7 @@ def model_settings():
 
     global retrain_model
     global n_classes
-    global model_name
+    global model_name, layerNames, layerValues
 
     param = {}
     for key in request.form:
@@ -411,8 +412,8 @@ def model_settings():
             'img_size': 32,
             'channels': request.form['channels'],
             'num_classes': n_classes,
-            'list1': request.form['layer_names'],  # ['Conv2D', 'MaxPool2D', 'Flatten', 'Dense'],
-            'list2': request.form['layer_settings']  # [[16, 3, 1, 'same', 'relu'], [2, 1, 'same'], [], [64, 'relu']]
+            'list1': layerNames,  # ['Conv2D', 'MaxPool2D', 'Flatten', 'Dense'],
+            'list2': layerValues  # [[16, 3, 1, 'same', 'relu'], [2, 1, 'same'], [], [64, 'relu']]
         }
         retrain_model = fnc.design_CNN(param)
     elif request.form['retrain_type'] == 'Pretrained':
