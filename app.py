@@ -100,7 +100,7 @@ def uploadimages():
             'path': image_names,
             'class_id': className,
             'csv_file_path': '/content/drive/MyDrive/Inter_IIT_German_Traffic_Sign/German_Traffic_Sign_Recognition_Dataset/training_set/images_color.csv',  # TODO add CSV PATH
-            'saved_images_directory': './temp/retrain/'
+            'save_images_directory': './temp/retrain/'
         }
         status = fnc.upload_class(param)
 
@@ -350,7 +350,7 @@ def retrain_segregate():
     model = load_model(model_path)
     ypred = fnc.predict_model(model, X_values)
     xtrain, xtest, ytrain, ytest = fnc.split(X_values, Y_values, model_path,
-                                             test_size=test_size, name=name, y_pred=ypred)
+                                             test_size, name, y_pred)
 
     data = {
         'status': 'success',
@@ -358,6 +358,36 @@ def retrain_segregate():
         'nTest': len(xtest)
     }
     return data
+
+layerNames = []
+layerValues = []
+
+@app.route('/cnn_add_layer', methods=['POST'])
+def cnn_add_layer():
+    '''
+    For rendering results on HTML GUI
+    '''
+    global layerNames, layerValues
+
+    if request.form['add_mode'] == 'undo' :
+      layerNames.pop()
+      layerValues.pop()
+    elif request.form['add_mode'] == 'reset':
+      layerNames = []
+      layerValues = []
+    else: 
+      layerNames.append(request.form['layer_name'])
+      layerValues.append(request.form['layer_value'])
+    
+    
+    print(layerNames)
+    print(layerValues)
+    print(json.loads(request.form['layer_value']))
+    data = {
+        'status': 'success',
+    }
+    return data
+
 
 
 @app.route('/model_settings', methods=['POST'])
@@ -384,6 +414,7 @@ def model_settings():
             'list1': request.form['layer_names'],  # ['Conv2D', 'MaxPool2D', 'Flatten', 'Dense'],
             'list2': request.form['layer_settings']  # [[16, 3, 1, 'same', 'relu'], [2, 1, 'same'], [], [64, 'relu']]
         }
+        retrain_model = fnc.design_CNN(param)
     elif request.form['retrain_type'] == 'Pretrained':
         param = {
             'img_size': 32,
@@ -391,9 +422,8 @@ def model_settings():
             'num_classes': n_classes,
             'list1': [request.form['pretrained_model']]
         }
-
-    retrain_model = fnc.design_CNN(param)
-    retrain_model = fnc.pre_trained_softmax()
+        retrain_model = fnc.pre_trained_softmax(param)
+    
     print(retrain_model)
 
     data = {
@@ -441,10 +471,15 @@ def train_model():
     for key in request.form:
         param[key] = json.loads(request.form[key])
 
+
     batch_size = request.form['batch_size']
     epochs = request.form['epochs']
     trained_model = fnc.train_model(compiled_model, model_name, batch_size, epochs, xtrain, ytrain, xtest, ytest)
     print(trained_model)
+
+
+    ypred = fnc.predict_model(trained_model, X_values)
+    #visualize_all(xtrain, xtest, ,)
 
     data = {
         'status': 'success'
