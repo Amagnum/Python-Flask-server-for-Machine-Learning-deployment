@@ -567,8 +567,7 @@ def kennard_stone(x, y, test_size, model_path):
 
 # bharat
 
-
-def split(csv_file_path, model_path, test_size=0.2, name='Normal', y_pred=None):
+def split(x_data,y_data, model_path, test_size=0.2, name='Normal', y_pred=None):
     """
     functions: splits the data into train and test set
     :param name: type of segregation (default value = 'Normal')
@@ -579,7 +578,7 @@ def split(csv_file_path, model_path, test_size=0.2, name='Normal', y_pred=None):
     :param y_pred: predicted labels (default value is None, user specified if name=Difficult_samples)
     :return: train and test set images and labels based on method specified by user
     """
-    x_data, y_data = load_dataset(csv_file_path=csv_file_path, size_of_image=32)
+    #x_data, y_data = load_dataset(csv_file_path=csv_file_path, size_of_image=32)
     x_data = np.array(x_data)
     y_data = np.array(y_data)
     if name == "Normal":
