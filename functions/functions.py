@@ -9,6 +9,15 @@ Original file is located at
 **Import libraries**
 """
 
+
+from tensorflow.keras.applications.resnet50 import ResNet50
+from tensorflow.keras.applications.vgg16 import VGG16
+from tensorflow.keras.applications.vgg19 import VGG19
+from tensorflow.keras.applications.inception_v3 import InceptionV3
+from tensorflow.keras.applications.xception import Xception
+from keras.models import Model, Sequential
+from keras.optimizers import Adam, RMSprop, SGD
+
 import csv
 import cv2
 import cv2 as cv
@@ -828,8 +837,6 @@ def compile_model(d, model):
 
 # sakshee/vartika
 
-# sakshee/vartika
-
 
 def pre_trained_softmax(d):
     #  '''
@@ -840,7 +847,7 @@ def pre_trained_softmax(d):
 
     #   returns: pre_trained designed model
     #   '''
-
+    model = Sequential()
     img_size = d['img_size']
     channels = d['channels']
     num_classes = d['num_classes']
@@ -848,47 +855,39 @@ def pre_trained_softmax(d):
 
     for i, pre_trained in enumerate(d['list1']):
 
-        if pre_trained == 'ResNet50':
-            model = ResNet50(include_top=True, weights='imagenet', input_shape=(img_size, img_size, channels))
-            model.pop()
-            model.add(Dense(num_classes, activation='softmax'))
-            layer_count = len(model.layers)
-            for l in range(layer_count-1):
-                model.layers[l].trainable = False
+        if pre_trained == 'ResNet50':  # Working
+            base_model = ResNet50(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
+            x = Flatten()(base_model.output)
+            top_model = Dense(num_classes, activation='softmax')(x)
+            model = Model(inputs=base_model.input, outputs=top_model)
 
         elif pre_trained == 'VGG16':
-            model = VGG16(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
-            model.pop()
-            model.add(Dense(num_classes, activation='softmax'))
-            layer_count = len(model.layers)
-            for l in range(layer_count-1):
-                model.layers[l].trainable = False
+            base_model = VGG16(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
+            x = Flatten()(base_model.output)
+            top_model = Dense(num_classes, activation='softmax')(x)
+            model = Model(inputs=base_model.input, outputs=top_model)
 
         elif pre_trained == 'VGG19':
-            model = VGG19(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
-            model.pop()
-            model.add(Dense(num_classes, activation='softmax'))
-            layer_count = len(model.layers)
-            for l in range(layer_count-1):
-                model.layers[l].trainable = False
+            base_model = VGG19(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
+            x = Flatten()(base_model.output)
+            top_model = Dense(num_classes, activation='softmax')(x)
+            model = Model(inputs=base_model.input, outputs=top_model)
 
         elif pre_trained == 'InceptionV3':
-            model = InceptionV3(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
-            model.pop()
-            model.add(Dense(num_classes, activation='softmax'))
-            layer_count = len(model.layers)
-            for l in range(layer_count-1):
-                model.layers[l].trainable = False
+            base_model = InceptionV3(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
+            x = Flatten()(base_model.output)
+            top_model = Dense(num_classes, activation='softmax')(x)
+            model = Model(inputs=base_model.input, outputs=top_model)
 
         elif pre_trained == 'Xception':
-            model = Xception(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
-            model.pop()
-            model.add(Dense(num_classes, activation='softmax'))
-            layer_count = len(model.layers)
-            for l in range(layer_count-1):
-                model.layers[l].trainable = False
+            base_model = Xception(include_top=False, weights='imagenet', input_shape=(img_size, img_size, channels))
+            x = Flatten()(base_model.output)
+            top_model = Dense(num_classes, activation='softmax')(x)
+            model = Model(inputs=base_model.input, outputs=top_model)
 
     return model
+
+
 # sakshee
 
 
@@ -913,7 +912,8 @@ def train_model(model, model_path, model_name, batch_size, epochs, X_train, Y_tr
               shuffle=True,)
 
     # the returned model must be saved. How to do that ? :p
-    # model.save(model_path + '/' + model_name + '.hdf5')
+    #model.save(model_path + '/' + model_name + '.hdf5')
+    model.save(model_path + '/' + model_name + '.h5')
     return model
 
 # sakshee/vartika
@@ -968,6 +968,7 @@ def ensemble(models_dict, no_of_models):
 """Visualozation Functions"""
 
 # yuvnish
+
 
 def model_summary(model):
     # '''
@@ -1034,8 +1035,9 @@ def visualise_occlusion_sensitivity(model, class_label, image_path, datadir, pat
 
     plot_save_path = datadir + "OS.png"
     cv.imwrite(plot_save_path, grid)
-    
+
     return plot_save_path
+
 
 def Classification_report(x, y, model):
     # '''
