@@ -931,11 +931,11 @@ def train_model(model, model_name, batch_size, epochs, X_train, Y_train, X_test,
     # '''
     Y_test = to_categorical(Y_test)
     Y_train = to_categorical(Y_train)
+
     hist = model.fit(X_train, Y_train,
                      batch_size=batch_size,
                      epochs=epochs,
-                     validation_data=(X_test, Y_test),
-                     shuffle=True,)
+                     validation_data=(X_test, Y_test))
     acc = evaluate_model(model, X_test, Y_test)[1]
     model_name = model_name+'_'+str(acc)
     model.save(model_path + '/' + model_name + '.h5')
@@ -1046,7 +1046,7 @@ def visualise_activations(model, input_data, datadir):
                 grid = cv.resize(grid, dsize=(400, 400))
                 grid = cv.copyMakeBorder(grid, 80, 1, 1, 1, cv.BORDER_CONSTANT, value=[255, 255, 255])
                 cv.putText(grid, 'layer '+str(i+1)+' : '+model.layers[i].name,
-                        (0, 50), cv.FONT_HERSHEY_COMPLEX, 0.6, (0, 0, 0))
+                           (0, 50), cv.FONT_HERSHEY_COMPLEX, 0.6, (0, 0, 0))
                 arr.append(grid)
             final = np.concatenate(arr, axis=0)
             cv.applyColorMap(final, cv.COLORMAP_HOT)
@@ -1137,6 +1137,7 @@ def plot_cm(Y_test, y_pred, datadir, figsize=(16, 16)):
     #        datadir - path where plots needs to be saved
     # returns: path where lots are saved
     # '''
+
     cm = confusion_matrix(Y_test, y_pred, labels=np.unique(Y_test))
     cm_sum = np.sum(cm, axis=1, keepdims=True)
     cm_perc = cm / cm_sum.astype(float) * 100
@@ -1245,7 +1246,7 @@ def assess_model_from_pb(model, xtest: np.ndarray, ytest: np.ndarray, save_plot_
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=2, fontsize=8)
-    fullpath = save_plot_path.joinpath(save_plot_path.stem + '_roc_curve.png')
+    fullpath = save_plot_path + '/_roc_curve.png'
     plt.savefig(fullpath)
 
 
@@ -1269,12 +1270,19 @@ def str_img(txt, datadir_path):
 
 def visualize_all(X_test, Y_test, y_pred, n_classes, datadir, saved_model, img_path, model_hist, patch_size=3, img_size=32):
     #saved_model = load_model(model_file_path)
+    plt.close()
     accuracy_and_loss_plot(model_hist, datadir)
+    plt.close()
     assess_model_from_pb(saved_model, X_test, Y_test, datadir)
-    bargraphs(saved_model, X_test, Y_test, n_classes, datadir, y_pred)
+    plt.close()
+    cfr = Classification_report(X_test, Y_test, saved_model)
+    plt.close()
+    str_img(cfr, datadir)
+    plt.close()
     visualise_activations(saved_model, img_path, datadir, img_size)
     m = max(y_pred)
     class_label = y_pred.index(m)
+    plt.close()
     visualise_occlusion_sensitivity(saved_model, class_label, patch_size, img_path, datadir, img_size)
-    Classification_report(X_test, Y_test, saved_model)
-    str_img(Classification_report, datadir)
+    plt.close()
+    bargraphs(saved_model, X_test, Y_test, n_classes, datadir)
