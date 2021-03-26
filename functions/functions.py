@@ -9,9 +9,14 @@ Original file is located at
 **Import libraries**
 """
 
+from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
 from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_curve
+from sklearn.metrics import auc
+from collections import deque
+import pandas as pd
 
 from IPython.display import Image as PImage
 import json
@@ -1146,7 +1151,6 @@ def plot_cm(Y_test, y_pred, datadir, figsize=(16, 16)):
 
 # harshita/muskan
 
-
 def bargraphs(model, x_test, y_test, n_classes, datadir):
     # '''
     # function: bar chart plot function
@@ -1162,15 +1166,15 @@ def bargraphs(model, x_test, y_test, n_classes, datadir):
     classes = list(range(n_classes))
     num_classes = n_classes
     cmap = plt.cm.gist_rainbow
-    norm = mpl.colors.Normalize(vmin=0, vmax=len(classes) - 1)
+    norm = plt.mpl.colors.Normalize(vmin=0, vmax=len(classes) - 1)
     colors = [cmap(norm(i)) for i in range(len(classes))]
-    cmpltnt_rela = cm_drops.plot.bar(stacked=True, color=colors, fontsize=8, figsize=(15, 15))
+    cmpltnt_rela = df.plot.bar(stacked=True, color=colors, fontsize=8, figsize=(15, 15))
     plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=2, fontsize=8)
 
     plt.tick_params('x', labelrotation=90, size=10)
 
     plt.tight_layout()
-    output_path_bar_chart = os.path.join(d['datadir'], 'bar_chart.png')
+    output_path_bar_chart = os.path.join(datadir, 'bar_chart.png')
     plt.savefig(output_path_bar_chart)
     return output_path_bar_chart
 
