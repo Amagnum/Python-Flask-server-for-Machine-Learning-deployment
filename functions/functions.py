@@ -9,6 +9,9 @@ Original file is located at
 **Import libraries**
 """
 
+from tf_explain.core.occlusion_sensitivity import OcclusionSensitivity
+from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.preprocessing.image import load_img
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
@@ -1010,6 +1013,7 @@ def visualise_activations(layer_name, model, input_data, datadir, img_size):
     #        model - saved model
     # returns: plot file-path string OR list of file-paths to plots
     # '''
+    explainer = ExtractActivations()
     if type(input_data) != list:
         image = load_img(input_data, target_size=(img_size, img_size))
         image = img_to_array(image)
@@ -1020,26 +1024,22 @@ def visualise_activations(layer_name, model, input_data, datadir, img_size):
         grid = cv.resize(grid, dsize=(10, 10))
         plot_save_path = datadir + 'AL0' + '.png'
         cv.imwrite(plot_save_path, grid)
-
         return plot_save_path
 
     else:
         image_l = input_data
+        plot_save_path_l = []
+        for i in range(len(image_l)):
+            grid = explainer.explain((np.array([image_l[i]]), None), model, [layer_name])
+            cv.applyColorMap(grid, cv.COLORMAP_HOT)
+            grid = cv.resize(grid, dsize=(10, 10))
+            plot_save_path = datadir + 'AL' + str(i) + '.png'
+            cv.imwrite(plot_save_path, grid)
+            plot_save_path_l.append(plot_save_path)
 
-    explainer = ExtractActivations()
-    plot_save_path_l = []
-    for i in range(len(image_l)):
-        grid = explainer.explain((np.array([image_l[i]]), None), model, [layer_name])
-        cv.applyColorMap(grid, cv.COLORMAP_HOT)
-        grid = cv.resize(grid, dsize=(10, 10))
-        plot_save_path = datadir + 'AL' + str(i) + '.png'
-        cv.imwrite(plot_save_path, grid)
-        plot_save_path_l.append(plot_save_path)
-
-    return plot_save_path_l
+        return plot_save_path_l
 
 # ankur
-
 
 def visualise_occlusion_sensitivity(model, class_label, image_path, datadir, patch_size=3, img_size=32):
     # '''
@@ -1093,7 +1093,7 @@ def accuracy_and_loss_plot(model_hist, datadir):
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend(loc="upper left")
-    output_path_accuracy = os.path.join(d['datadir'], 'accuracy.png')
+    output_path_accuracy = os.path.join(datadir, 'accuracy.png')
     plt.savefig(output_path_accuracy)
 
     plt.plot(model_hist.history['loss'], label='Train_loss')
@@ -1102,7 +1102,7 @@ def accuracy_and_loss_plot(model_hist, datadir):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend(loc="upper left")
-    output_path_loss = os.path.join(d['datadir'], 'loss.png')
+    output_path_loss = os.path.join(datadir, 'loss.png')
     plt.savefig(output_path_loss)
     return output_path_accuracy, output_path_loss
 
@@ -1145,7 +1145,7 @@ def plot_cm(Y_test, y_pred, datadir, figsize=(16, 16)):
 
     fig, ax = plt.subplots(figsize=figsize)
     sns.heatmap(cm, cmap="YlGnBu", annot=annot, fmt='', ax=ax, annot_kws={"size": 9})
-    output_path_confusion_matrix = os.path.join(d['datadir'], 'confusion_matrix.png')
+    output_path_confusion_matrix = os.path.join(datadir, 'confusion_matrix.png')
     plt.savefig(output_path_confusion_matrix)
     return cm, output_path_confusion_matrix
 
