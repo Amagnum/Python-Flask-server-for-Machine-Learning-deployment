@@ -1006,40 +1006,60 @@ def model_summary(model):
 # ankur
 
 
-def visualise_activations(layer_name, model, input_data, datadir, img_size):
-    # '''
-    # function: to visualize output after a specific layer of model
-    # param: layer_name - name of layer of model whose output is needed
-    #        model - saved model
-    # returns: plot file-path string OR list of file-paths to plots
-    # '''
-    explainer = ExtractActivations()
+def visualise_activations(model, input_data, datadir):
+    '''
+    function: to visualize output after a specific layer of model
+    param: layer_name - name of layer of model whose output is needed
+           model - saved model
+    returns: string file-path to output plot OR list of file-paths to plots
+    '''
     if type(input_data) != list:
-        image = load_img(input_data, target_size=(img_size, img_size))
+        image = load_img(input_data, target_size=(32, 32))
         image = img_to_array(image)
         image_l = [image]
-
-        grid = explainer.explain((np.array(image_l), None), model, [layer_name])
-        cv.applyColorMap(grid, cv.COLORMAP_HOT)
-        grid = cv.resize(grid, dsize=(10, 10))
+        explainer = ExtractActivations()
+        arr = []
+        for i in range(4):
+            grid = explainer.explain((np.array(image_l), None), model, [model.layers[i].name])
+            cv.applyColorMap(grid, cv.COLORMAP_HOT)
+            grid = cv.resize(grid, dsize=(400, 400))
+            grid = cv.copyMakeBorder(grid, 80, 1, 1, 1, cv.BORDER_CONSTANT, value=[255, 255, 255])
+            cv.putText(grid, 'layer '+str(i+1)+' : '+model.layers[i].name,
+                       (0, 50), cv.FONT_HERSHEY_COMPLEX, 0.6, (0, 0, 0))
+            arr.append(grid)
+        final = np.concatenate(arr, axis=0)
         plot_save_path = datadir + 'AL0' + '.png'
-        cv.imwrite(plot_save_path, grid)
+        cv.imwrite(plot_save_path, final)
+
         return plot_save_path
 
     else:
         image_l = input_data
+
+        explainer = ExtractActivations()
         plot_save_path_l = []
         for i in range(len(image_l)):
-            grid = explainer.explain((np.array([image_l[i]]), None), model, [layer_name])
-            cv.applyColorMap(grid, cv.COLORMAP_HOT)
-            grid = cv.resize(grid, dsize=(10, 10))
+            arr = []
+            for i in range(4):
+                grid = explainer.explain((np.array(image_l), None), model, [model.layers[i].name])
+                cv.applyColorMap(grid, cv.COLORMAP_HOT)
+                grid = cv.resize(grid, dsize=(400, 400))
+                grid = cv.copyMakeBorder(grid, 80, 1, 1, 1, cv.BORDER_CONSTANT, value=[255, 255, 255])
+                cv.putText(grid, 'layer '+str(i+1)+' : '+model.layers[i].name,
+                        (0, 50), cv.FONT_HERSHEY_COMPLEX, 0.6, (0, 0, 0))
+                arr.append(grid)
+            final = np.concatenate(arr, axis=0)
+            cv.applyColorMap(final, cv.COLORMAP_HOT)
+            grid = cv.resize(final, dsize=(400, 400))
             plot_save_path = datadir + 'AL' + str(i) + '.png'
-            cv.imwrite(plot_save_path, grid)
+            cv.imwrite(plot_save_path, final)
             plot_save_path_l.append(plot_save_path)
 
         return plot_save_path_l
 
+
 # ankur
+
 
 def visualise_occlusion_sensitivity(model, class_label, image_path, datadir, patch_size=3, img_size=32):
     # '''
@@ -1151,6 +1171,7 @@ def plot_cm(Y_test, y_pred, datadir, figsize=(16, 16)):
 
 # harshita/muskan
 
+
 def bargraphs(model, x_test, y_test, n_classes, datadir):
     # '''
     # function: bar chart plot function
@@ -1229,7 +1250,7 @@ def assess_model_from_pb(model, xtest: np.ndarray, ytest: np.ndarray, save_plot_
 
 
 def str_img(txt, datadir_path):
-    img = Image.new('RGB', (900, 900), color = 'white')
+    img = Image.new('RGB', (900, 900), color='white')
     if type(txt) == 'dict':
         txt = json.dumps(txt)
         d = ImageDraw.Draw(img)
