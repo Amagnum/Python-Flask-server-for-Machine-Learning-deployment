@@ -9,6 +9,14 @@ Original file is located at
 **Import libraries**
 """
 
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import label_binarize
+
+from IPython.display import Image as PImage
+import json
+from PIL import Image, ImageDraw
+
 from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.vgg19 import VGG19
@@ -56,6 +64,17 @@ from augmentations import augmentations as augs
 """Functions for Step 1"""
 
 # yuvnish, vartika
+
+
+def get_models(path="/content/drive/MyDrive/Inter IIT German Traffic Sign/models"):
+    model_names = []
+    accuracy_values = []
+    for model in os.listdir(path):
+        model = model[:-3]
+        accuracy_values.append(model.split('_')[1])
+        model_names.append(model.split('_')[0])
+
+    return model_names, accuracy_values
 
 
 def visualize_classes(dict):
@@ -889,34 +908,30 @@ def pre_trained_softmax(d):
 # sakshee
 
 
-def train_model(model, model_path, model_name, batch_size, epochs, X_train, Y_train, X_test, Y_test):
-    '''
-    param: model = compiled model
-           model_name - name of model defined by user
-           model_path = path in drive where trained model gets saved
-           batch_size = variable integer from 1 to 1024 with step size 1 (default 64)
-           epochs = variable integer from 1 to 200 with step size 1 (default 10)
-           X_train - list of train images
-           Y_train - list of labels of train images
-           X_test - list of test images
-           Y_test - list of labels of test images
-    returns: trained model
-    '''
-    Y_train = to_categorical(Y_train)
-    print(Y_train.shape)
-
+def train_model(model, model_name, batch_size, epochs, X_train, Y_train, X_test, Y_test, model_path="/content/drive/MyDrive/Inter IIT German Traffic Sign/models"):
+    # '''
+    # param: model = compiled model
+    #        model_name - name of model defined by user
+    #        model_path = path in drive where trained model gets saved
+    #        batch_size = variable integer from 1 to 1024 with step size 1 (default 64)
+    #        epochs = variable integer from 1 to 200 with step size 1 (default 10)
+    #        X_train - list of train images
+    #        Y_train - list of labels of train images
+    #        X_test - list of test images
+    #        Y_test - list of labels of test images
+    # returns: trained model
+    # '''
     Y_test = to_categorical(Y_test)
-    print(Y_test.shape)
-
-    model.fit(X_train, Y_train,
-              batch_size=batch_size,
-              epochs=epochs,
-              validation_data=(X_test, Y_test),
-              shuffle=True,)
-
-    # the returned model must be saved. How to do that ? :p
+    Y_train = to_categorical(Y_train)
+    hist = model.fit(X_train, Y_train,
+                     batch_size=batch_size,
+                     epochs=epochs,
+                     validation_data=(X_test, Y_test),
+                     shuffle=True,)
+    acc = evaluate_model(model, X_test, Y_test)[1]
+    model_name = model_name+'_'+str(acc)
     model.save(model_path + '/' + model_name + '.h5')
-    return model
+    return model, hist
 
 # sakshee/vartika
 
@@ -948,23 +963,23 @@ def predict_model(model, X):
 # harshita
 
 
-def ensemble(models_dict, no_of_models):
-    '''
-    function: creates ensemble of top classifiers
-    param: model_dict - model_dict['model_name'] = accuracy
-           no_of_models - number of models to create ensemble with
-    returns: mean accuracy after ensembling, number of models used for ensembling
-    '''
-    sorted_tuples = sorted(models_dict.items(), key=lambda item: item[1])
-    sorted_dict = {k: v for k, v in sorted_tuples}
-    models = []
-    acc = []
-    for k, v in sorted_dict.items():
-        models.append(k)
-        acc.append(v)
-    acc_mean = np.mean(acc[0:no_of_models])
-    models_used = models[0:no_of_models]
-    return acc_mean, models_used
+def ensemble(models, X_test, Y_test):
+    # '''
+    # function: creates ensemble of top classifiers
+    # param: models=list of models selected
+    #        X_test,Y_test
+    # returns: classification report of the ensembled model
+    # '''
+    Y_test = to_categorical(Y_test)
+    y_pred_dict = {}
+    for i in models:
+        y_pred_dict[i] = i.predict(X_test)
+
+    # print(y_pred_dict)
+    y_pred_mean = np.mean(list(y_pred_dict.values()), axis=0)
+    y_pred_mean = np.argmax(y_pred_mean, axis=1)
+    Y_test = np.argmax(Y_test, axis=1)
+    return classification_report(Y_test, y_pred_mean, digits=4)
 
 
 """Visualozation Functions"""
@@ -973,11 +988,11 @@ def ensemble(models_dict, no_of_models):
 
 
 def model_summary(model):
-    # '''
-    # function: returns summary of model to check which layers are present in the model
-    # param: model - saved model
-    # returns: summarry of model
-    # '''
+        # '''
+        # function: returns summary of model to check which layers are present in the model
+        # param: model - saved model
+        # returns: summarry of model
+        # '''
     return model.summary()
 
 # ankur
@@ -1049,36 +1064,36 @@ def Classification_report(x, y, model):
     #        model - saved model
     # returns: classification report of model on data
     # '''
-    x = numpy.array(x)
-    y = numpy.array(y)
+    x = np.array(x)
+    y = np.array(y)
     y = to_categorical(y)
     y_pred = predict_model(model, x)
-    y_pred = numpy.argmax(y_pred, axis=1)
-    y = numpy.argmax(y, axis=1)
+    y_pred = np.argmax(y_pred, axis=1)
+    y = np.argmax(y, axis=1)
     return classification_report(y, y_pred)
 
 # yuvnish
 
 
-def accuracy_and_loss_plot(model, datadir):
+def accuracy_and_loss_plot(model_hist, datadir):
     # '''
     # function: plots of accuracy and loss
-    # param: model - saved model
+    # param: model_hist - saved model_hist
     #        datadir - path where plots needs to be saved
     # returns: path where lots are saved
     # '''
-    plt.plot(model.history.history['accuracy'], label='Train_accuracy')
-    plt.plot(model.history.history['val_accuracy'], label='Test_accuracy')
-    plt.title('Model Accuracy')
+    plt.plot(model_hist.history['accuracy'], label='Train_accuracy')
+    plt.plot(model_hist.history['val_accuracy'], label='Test_accuracy')
+    plt.title('Model_hist Accuracy')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend(loc="upper left")
     output_path_accuracy = os.path.join(d['datadir'], 'accuracy.png')
     plt.savefig(output_path_accuracy)
 
-    plt.plot(model.history.history['loss'], label='Train_loss')
-    plt.plot(model.history.history['val_loss'], label='Test_loss')
-    plt.title('Model Loss')
+    plt.plot(model_hist.history['loss'], label='Train_loss')
+    plt.plot(model_hist.history['val_loss'], label='Test_loss')
+    plt.title('Model_hist Loss')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend(loc="upper left")
@@ -1093,7 +1108,7 @@ def plot_cm(Y_test, y_pred, datadir, figsize=(16, 16)):
     # '''
     # function: plots confusion matrix and returns data frame
     # param: Y_test - list of labels
-    #        y_pred - predictions of model
+    #        y_pred - predictions of model_hist
     #        datadir - path where plots needs to be saved
     # returns: path where lots are saved
     # '''
@@ -1210,6 +1225,7 @@ def assess_model_from_pb(model, xtest: np.ndarray, ytest: np.ndarray, save_plot_
 
 
 def str_img(txt, datadir_path):
+    img = Image.new('RGB', (900, 900), color = 'white')
     if type(txt) == 'dict':
         txt = json.dumps(txt)
         d = ImageDraw.Draw(img)
@@ -1226,14 +1242,14 @@ def str_img(txt, datadir_path):
         PImage(output_path)
 
 
-def visualize_all(X_test, Y_test, y_pred, n_classes, datadir, saved_model, img_path, patch_size=3, img_size=32):
+def visualize_all(X_test, Y_test, y_pred, n_classes, datadir, saved_model, img_path, model_hist, patch_size=3, img_size=32):
     #saved_model = load_model(model_file_path)
-    accuracy_and_loss_plot(saved_model, datadir)
+    accuracy_and_loss_plot(model_hist, datadir)
     assess_model_from_pb(saved_model, X_test, Y_test, datadir)
     bargraphs(saved_model, X_test, Y_test, n_classes, datadir, y_pred)
-    visualise_activations(model, img_path, datadir, img_size)
+    visualise_activations(saved_model, img_path, datadir, img_size)
     m = max(y_pred)
     class_label = y_pred.index(m)
-    visualise_occlusion_sensitivity(model, class_label, patch_size, img_path, datadir, img_size)
-    Classification_report(X_test, Y_test, model)
+    visualise_occlusion_sensitivity(saved_model, class_label, patch_size, img_path, datadir, img_size)
+    Classification_report(X_test, Y_test, saved_model)
     str_img(Classification_report, datadir)
