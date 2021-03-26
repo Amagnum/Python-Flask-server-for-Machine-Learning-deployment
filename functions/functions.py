@@ -9,7 +9,6 @@ Original file is located at
 **Import libraries**
 """
 
-
 from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.applications.vgg19 import VGG19
@@ -887,7 +886,6 @@ def pre_trained_softmax(d):
 
     return model
 
-
 # sakshee
 
 
@@ -904,6 +902,11 @@ def train_model(model, model_path, model_name, batch_size, epochs, X_train, Y_tr
            Y_test - list of labels of test images
     returns: trained model
     '''
+    Y_train = to_categorical(Y_train)
+    print(Y_train.shape)
+
+    Y_test = to_categorical(Y_test)
+    print(Y_test.shape)
 
     model.fit(X_train, Y_train,
               batch_size=batch_size,
@@ -912,7 +915,6 @@ def train_model(model, model_path, model_name, batch_size, epochs, X_train, Y_tr
               shuffle=True,)
 
     # the returned model must be saved. How to do that ? :p
-    #model.save(model_path + '/' + model_name + '.hdf5')
     model.save(model_path + '/' + model_name + '.h5')
     return model
 
@@ -1158,7 +1160,7 @@ def bargraphs(model, x_test, y_test, n_classes, datadir):
     return output_path_bar_chart
 
 
-def assess_model_from_pb(model_file_path, xtest: np.ndarray, ytest: np.ndarray, save_plot_path):
+def assess_model_from_pb(model, xtest: np.ndarray, ytest: np.ndarray, save_plot_path):
     '''
     function: plot the one vs all roc-auc curve
     input param: model_file_path: path of the saved model
@@ -1168,7 +1170,7 @@ def assess_model_from_pb(model_file_path, xtest: np.ndarray, ytest: np.ndarray, 
 
     '''
     class_labels = range(43)
-    model = load_model(model_file_path)  # load model from filepath
+    # model = load_model(model_file_path)  # load model from filepath
     # extract dense output layer (will be softmax probabilities)
     feature_extractor = Model(inputs=model.inputs, outputs=model.get_layer('dense').output)
     y_score = feature_extractor.predict(xtest, batch_size=64)  # one hot encoded softmax predictions
@@ -1224,14 +1226,14 @@ def str_img(txt, datadir_path):
         PImage(output_path)
 
 
-def visualize_all(X_test, Y_test, y_pred, n_classes, datadir, model_file_path, img_path, patch_size=3, img_size=32):
-    saved_model = load_model(model_file_path)
+def visualize_all(X_test, Y_test, y_pred, n_classes, datadir, saved_model, img_path, patch_size=3, img_size=32):
+    #saved_model = load_model(model_file_path)
     accuracy_and_loss_plot(saved_model, datadir)
-    assess_model_from_pb(model_file_path, X_test, Y_test, datadir)
+    assess_model_from_pb(saved_model, X_test, Y_test, datadir)
     bargraphs(saved_model, X_test, Y_test, n_classes, datadir, y_pred)
     visualise_activations(model, img_path, datadir, img_size)
     m = max(y_pred)
     class_label = y_pred.index(m)
-    visualise_occlusion_sensitivity(model, class_label, patch_size, image_path, datadir, img_size)
+    visualise_occlusion_sensitivity(model, class_label, patch_size, img_path, datadir, img_size)
     Classification_report(X_test, Y_test, model)
     str_img(Classification_report, datadir)
